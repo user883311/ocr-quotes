@@ -1,0 +1,39 @@
+MyQuotes PIPELINE
+
+- [ ] CAPTURE: Acquire photo and store it 
+- [ ] PREPROCESSING photo: 
+        - [ ] border removal (beware: Note that adding a white border to text which is too tightly cropped may also help, see issue 398.)
+        - [ ] binarisation: Tesseract does this internally, but the result can be suboptimal, particularly if the page background is of uneven darkness, 
+        - [ ] noise removal
+        - [ ] rotation/deskewing page, 
+        - [ ] brightness correction, 
+        - [ ] find 4 edges (4 coordinates)
+        - [ ] flatten using npm module perspective-transform
+        - [ ] contrast enhancement 
+        - [ ] upscale: Tesseract works best on images which have a DPI of at least 300 dpi
+- [ ] TEXT DETECTION: Identify text areas / ignore images, using SWT (Stroke Width Transform) https://github.com/liuliu/ccv/blob/stable/doc/swt.md 
+Tesseract seem to have Orientation and script detection (OSD). 
+
+- [x] OCR: Process OCR on text areas
+- [ ] User highlights the Quote
+- [ ] Create an object with the quote, and a copy (image? OCRed text?) of the background
+- [ ] Save the object in database
+
+
+Resources: 
+Tesseract
+
+OpenCV
+http://felix.abecassis.me/2011/10/opencv-bounding-box-skew-angle/
+
+Fred's ImageMagick Scripts 
+http://www.fmwconcepts.com/imagemagick/autotrim/index.php
+
+Pixi JS
+http://www.pixijs.com/
+
+hocrjs
+https://github.com/kba/hocrjs
+
+XML parser
+https://github.com/racker/node-elementtree 
