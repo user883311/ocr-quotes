@@ -2899,14 +2899,19 @@ exports.merge = merge;
 
 }).call(this,require("buffer").Buffer)
 },{"buffer":18,"stream":41,"string_decoder":42}],12:[function(require,module,exports){
-// const i04 = "/Users/accountname/Dropbox/projects/others/ocr-quotes/assets/i04.JPG";
+/* This modules acquires an image file, stores it in a folder (assets), 
+and returns the image's relative path. */ 
+// @ts-check
+
+// For now, we'll just take a file from our assets folder. 
 const imageSource = "./assets/images/i04.jpg";
 
-
-// CAPTURE: Acquire photo and store it
+// Eventually, we'll want to have a proper image capture process, 
+// from the device's camera. 
 
 module.exports = imageSource;
 },{}],13:[function(require,module,exports){
+// @ts-check
 
 const xmlFilePath = "../assets/hocr/";
 const xmlFileName = "i04.hocr";
@@ -2920,6 +2925,10 @@ const xmlFile = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE html PUBL
 
 module.exports.endPoint = xmlFile;
 },{}],14:[function(require,module,exports){
+/* This modules renders the HOCR file in a canvas in the browser, 
+and manages the interactions with the user. 
+It does not return anything. */ 
+
 const xmlParser = require("./xmlparser");
 const canvas = document.getElementById("canvas");
 // const imageSource = "./assets/images/i04.jpg";
