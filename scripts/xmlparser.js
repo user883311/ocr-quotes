@@ -1,17 +1,18 @@
-const importXML = require("./importXML");
-const xml = importXML.endPoint;
-
+/* This module parses an input XML file and returns 
+a collection of function to navigate that XML. 
+---------------------------------------------------*/
 const et = require('elementtree');
-// const XML = et.XML;
-// const ElementTree = et.ElementTree;
-// const element = et.Element;
-// const subElement = et.SubElement;
+const xml = require("./ocrPhoto"); // it's a promise
 
-const etree = et.parse(xml);
-const wordElements = etree.findall(".//span/[@class='ocrx_word']"); // collection
-
-const wordObjectsList = buildWordObjectsList(wordElements);
-// console.log(wordForCoordinates(wordObjectsList, 813, 69))
+let wordObjectsList;
+xml.then(text => {
+    const etree = et.parse(text);;
+    const wordElements = etree.findall(".//span/[@class='ocrx_word']"); // collection
+    wordObjectsList = buildWordObjectsList(wordElements); // ok
+    console.log(wordForCoordinates(813, 69)); // 'values'
+}, err => {
+    console.log(err);
+});
 
 function buildWordObjectsList(wordElements) {
     /* Returns collection of objects in the form 
@@ -39,10 +40,8 @@ function buildWordObjectsList(wordElements) {
             highlighted: false
         })
     }); // array
-    // console.log(res);
     return res;
 }
-
 function wordForCoordinates(x, y) {
     /* Input: [x, y] coordinates
     Output: corresponding word element (an object) */
@@ -55,12 +54,10 @@ function wordForCoordinates(x, y) {
     let el;
     for (i = 0; i < wordCount; i++) {
         el = wordObjectsList[i];
-        // adjust word 4 coordinates with w and h
         let xA = el.xA,
             yA = el.yA,
             xB = el.xB,
             yB = el.yB;
-        // console.log([xA, yA, xB, yB]);
 
         // if x, y are within the bbox
         if (x >= xA && x <= xB && y >= yA && y <= yB) {
@@ -68,12 +65,12 @@ function wordForCoordinates(x, y) {
             return el;
         }
     }
-    // console.log("There was no word corresponding to these coordinates x", x, "and y", y)
+    // else if there is no match
+    // console.log("There was no word corresponding to coordinates x", x, "and y", y);
     return undefined;
 
     // BISECTION METHOD (faster)
 }
-
 function wordsElementsBetween(startWordId, endWordId) {
     /* this function returns all the words objects for words between
     the startWord and the endWord */
@@ -91,3 +88,4 @@ module.exports = {
     wordForCoordinates,
     wordsElementsBetween
 };
+console.log("xmlparser.js passed. ");
