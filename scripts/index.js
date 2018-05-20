@@ -7,7 +7,7 @@ app.use(express.static("public"));
 // require("./startup/prod")(app);
 
 // The list of routes is stored under : 
-const routesModule = require("./scripts/routes.js");
+const routesModule = require("./routes.js");
 app.use("/", routesModule);
 // app.use(error);
 
