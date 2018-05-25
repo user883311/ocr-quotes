@@ -8,8 +8,9 @@ const et = require('elementtree');
 // const subElement = et.SubElement;
 
 const etree = et.parse(xml);
+console.log(xml);
 const wordElements = etree.findall(".//span/[@class='ocrx_word']"); // collection
-
+// console.log(wordElements);
 const wordObjectsList = buildWordObjectsList(wordElements);
 // console.log(wordForCoordinates(wordObjectsList, 813, 69))
 

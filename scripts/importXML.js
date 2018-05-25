@@ -1,4 +1,4 @@
-// @ts-check
+
 const fs = require("fs");
 const xmlFilePath = "../assets/hocr/";
 const xmlFileName = "i04.hocr";

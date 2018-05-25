@@ -2911,7 +2911,7 @@ const imageSource = "./assets/images/i04.jpg";
 
 module.exports = imageSource;
 },{}],13:[function(require,module,exports){
-// @ts-check
+
 
 const xmlFilePath = "../assets/hocr/";
 const xmlFileName = "i04.hocr";
