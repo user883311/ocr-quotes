@@ -1,4 +1,142 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+'use strict'
+
+const assert = require('assert')
+
+module.exports = createCustomError
+
+function createCustomError(name, init, parent) {
+    parent = parent || Error
+
+    assert.equal(typeof name, 'string', 'constructor name must be a string')
+    assert(name, 'constructor name cannot be an empty string')
+    if (init)
+        assert.equal(typeof init, 'function', 'constructor must be a function')
+    assert(parent === Error || parent.prototype instanceof Error, 'parent must be derived from Error()')
+
+    const ctor = function () {
+        // make `new` optional
+        if (this instanceof ctor)
+            var inst = this
+        else
+            inst = Object.create(ctor.prototype)
+
+        // create base error object
+        const err = parent.apply(inst, arguments)
+        // get rid of irrelevant stack frames
+        Error.captureStackTrace(err, ctor)
+
+        inst.name = err.name = name
+        inst.message = err.message
+
+        // stack is not always important and is expensive to generate
+        Object.defineProperty(inst, 'stack', {
+            get: () => err.stack,
+            configurable: true
+        })
+
+        if (init)
+            init.apply(inst, arguments)
+
+        return inst
+    }
+
+    // set function name (it appears in traces)
+    Object.defineProperty(ctor, 'name', {
+        value: name,
+        configurable: true
+    })
+
+    // inherit from parent
+    ctor.prototype = Object.create(parent.prototype)
+    ctor.prototype.inspect = inspect
+    ctor.prototype.constructor = ctor
+
+    return ctor
+}
+
+function inspect() {
+    return this.stack
+}
+
+},{"assert":26}],2:[function(require,module,exports){
+/*!
+ * destroy
+ * Copyright(c) 2014 Jonathan Ong
+ * MIT Licensed
+ */
+
+'use strict'
+
+/**
+ * Module dependencies.
+ * @private
+ */
+
+var ReadStream = require('fs').ReadStream
+var Stream = require('stream')
+
+/**
+ * Module exports.
+ * @public
+ */
+
+module.exports = destroy
+
+/**
+ * Destroy a stream.
+ *
+ * @param {object} stream
+ * @public
+ */
+
+function destroy(stream) {
+  if (stream instanceof ReadStream) {
+    return destroyReadStream(stream)
+  }
+
+  if (!(stream instanceof Stream)) {
+    return stream
+  }
+
+  if (typeof stream.destroy === 'function') {
+    stream.destroy()
+  }
+
+  return stream
+}
+
+/**
+ * Destroy a ReadStream.
+ *
+ * @param {object} stream
+ * @private
+ */
+
+function destroyReadStream(stream) {
+  stream.destroy()
+
+  if (typeof stream.close === 'function') {
+    // node.js core bug work-around
+    stream.on('open', onOpenClose)
+  }
+
+  return stream
+}
+
+/**
+ * On open handler to close stream.
+ * @private
+ */
+
+function onOpenClose() {
+  if (typeof this.fd === 'number') {
+    // actually close down the fd
+    this.close()
+  }
+}
+
+},{"fs":25,"stream":53}],3:[function(require,module,exports){
 /*
  *  Copyright 2011 Rackspace
  *
@@ -20,7 +158,7 @@ var DEFAULT_PARSER = 'sax';
 
 exports.DEFAULT_PARSER = DEFAULT_PARSER;
 
-},{}],2:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 /**
  *  Copyright 2011 Rackspace
  *
@@ -365,7 +503,7 @@ exports.find = find;
 exports.findall = findall;
 exports.findtext = findtext;
 
-},{"./errors":4,"./sprintf":8,"./utils":10}],3:[function(require,module,exports){
+},{"./errors":6,"./sprintf":10,"./utils":12}],5:[function(require,module,exports){
 /**
  *  Copyright 2011 Rackspace
  *
@@ -978,7 +1116,7 @@ exports.parse = parse;
 exports.register_namespace = register_namespace;
 exports.tostring = tostring;
 
-},{"./constants":1,"./elementpath":2,"./parser":5,"./sprintf":8,"./treebuilder":9,"./utils":10}],4:[function(require,module,exports){
+},{"./constants":3,"./elementpath":4,"./parser":7,"./sprintf":10,"./treebuilder":11,"./utils":12}],6:[function(require,module,exports){
 /**
  *  Copyright 2011 Rackspace
  *
@@ -1011,7 +1149,7 @@ util.inherits(SyntaxError, Error);
 
 exports.SyntaxError = SyntaxError;
 
-},{"./sprintf":8,"util":46}],5:[function(require,module,exports){
+},{"./sprintf":10,"util":58}],7:[function(require,module,exports){
 /*
  *  Copyright 2011 Rackspace
  *
@@ -1046,10 +1184,10 @@ function get_parser(name) {
 
 exports.get_parser = get_parser;
 
-},{"./parsers/index":6,"util":46}],6:[function(require,module,exports){
+},{"./parsers/index":8,"util":58}],8:[function(require,module,exports){
 exports.sax = require('./sax');
 
-},{"./sax":7}],7:[function(require,module,exports){
+},{"./sax":9}],9:[function(require,module,exports){
 var util = require('util');
 
 var sax = require('sax');
@@ -1107,7 +1245,7 @@ XMLParser.prototype.close = function() {
 
 exports.XMLParser = XMLParser;
 
-},{"./../treebuilder":9,"sax":11,"util":46}],8:[function(require,module,exports){
+},{"./../treebuilder":11,"sax":17,"util":58}],10:[function(require,module,exports){
 /*
  *  Copyright 2011 Rackspace
  *
@@ -1195,7 +1333,7 @@ exports.sprintf = function(formatter, var_args) {
   return cache[formatter].apply(null, arguments);
 };
 
-},{}],9:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 function TreeBuilder(element_factory) {
   this._data = [];
   this._elem = [];
@@ -1257,7 +1395,7 @@ TreeBuilder.prototype.end = function(tag) {
 
 exports.TreeBuilder = TreeBuilder;
 
-},{"./elementtree":3}],10:[function(require,module,exports){
+},{"./elementtree":5}],12:[function(require,module,exports){
 /**
  *  Copyright 2011 Rackspace
  *
@@ -1331,7 +1469,203 @@ exports.items = items;
 exports.findall = findall;
 exports.merge = merge;
 
-},{}],11:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
+(function (process,global){
+var fs = require('fs')
+var core
+if (process.platform === 'win32' || global.TESTING_WINDOWS) {
+  core = require('./windows.js')
+} else {
+  core = require('./mode.js')
+}
+
+module.exports = isexe
+isexe.sync = sync
+
+function isexe (path, options, cb) {
+  if (typeof options === 'function') {
+    cb = options
+    options = {}
+  }
+
+  if (!cb) {
+    if (typeof Promise !== 'function') {
+      throw new TypeError('callback not provided')
+    }
+
+    return new Promise(function (resolve, reject) {
+      isexe(path, options || {}, function (er, is) {
+        if (er) {
+          reject(er)
+        } else {
+          resolve(is)
+        }
+      })
+    })
+  }
+
+  core(path, options || {}, function (er, is) {
+    // ignore EACCES because that just means we aren't allowed to run it
+    if (er) {
+      if (er.code === 'EACCES' || options && options.ignoreErrors) {
+        er = null
+        is = false
+      }
+    }
+    cb(er, is)
+  })
+}
+
+function sync (path, options) {
+  // my kingdom for a filtered catch
+  try {
+    return core.sync(path, options || {})
+  } catch (er) {
+    if (options && options.ignoreErrors || er.code === 'EACCES') {
+      return false
+    } else {
+      throw er
+    }
+  }
+}
+
+}).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{"./mode.js":14,"./windows.js":15,"_process":38,"fs":25}],14:[function(require,module,exports){
+(function (process){
+module.exports = isexe
+isexe.sync = sync
+
+var fs = require('fs')
+
+function isexe (path, options, cb) {
+  fs.stat(path, function (er, stat) {
+    cb(er, er ? false : checkStat(stat, options))
+  })
+}
+
+function sync (path, options) {
+  return checkStat(fs.statSync(path), options)
+}
+
+function checkStat (stat, options) {
+  return stat.isFile() && checkMode(stat, options)
+}
+
+function checkMode (stat, options) {
+  var mod = stat.mode
+  var uid = stat.uid
+  var gid = stat.gid
+
+  var myUid = options.uid !== undefined ?
+    options.uid : process.getuid && process.getuid()
+  var myGid = options.gid !== undefined ?
+    options.gid : process.getgid && process.getgid()
+
+  var u = parseInt('100', 8)
+  var g = parseInt('010', 8)
+  var o = parseInt('001', 8)
+  var ug = u | g
+
+  var ret = (mod & o) ||
+    (mod & g) && gid === myGid ||
+    (mod & u) && uid === myUid ||
+    (mod & ug) && myUid === 0
+
+  return ret
+}
+
+}).call(this,require('_process'))
+},{"_process":38,"fs":25}],15:[function(require,module,exports){
+(function (process){
+module.exports = isexe
+isexe.sync = sync
+
+var fs = require('fs')
+
+function checkPathExt (path, options) {
+  var pathext = options.pathExt !== undefined ?
+    options.pathExt : process.env.PATHEXT
+
+  if (!pathext) {
+    return true
+  }
+
+  pathext = pathext.split(';')
+  if (pathext.indexOf('') !== -1) {
+    return true
+  }
+  for (var i = 0; i < pathext.length; i++) {
+    var p = pathext[i].toLowerCase()
+    if (p && path.substr(-p.length).toLowerCase() === p) {
+      return true
+    }
+  }
+  return false
+}
+
+function checkStat (stat, path, options) {
+  if (!stat.isSymbolicLink() && !stat.isFile()) {
+    return false
+  }
+  return checkPathExt(path, options)
+}
+
+function isexe (path, options, cb) {
+  fs.stat(path, function (er, stat) {
+    cb(er, er ? false : checkStat(stat, path, options))
+  })
+}
+
+function sync (path, options) {
+  return checkStat(fs.statSync(path), path, options)
+}
+
+}).call(this,require('_process'))
+},{"_process":38,"fs":25}],16:[function(require,module,exports){
+var wrappy = require('wrappy')
+module.exports = wrappy(once)
+module.exports.strict = wrappy(onceStrict)
+
+once.proto = once(function () {
+  Object.defineProperty(Function.prototype, 'once', {
+    value: function () {
+      return once(this)
+    },
+    configurable: true
+  })
+
+  Object.defineProperty(Function.prototype, 'onceStrict', {
+    value: function () {
+      return onceStrict(this)
+    },
+    configurable: true
+  })
+})
+
+function once (fn) {
+  var f = function () {
+    if (f.called) return f.value
+    f.called = true
+    return f.value = fn.apply(this, arguments)
+  }
+  f.called = false
+  return f
+}
+
+function onceStrict (fn) {
+  var f = function () {
+    if (f.called)
+      throw new Error(f.onceError)
+    f.called = true
+    return f.value = fn.apply(this, arguments)
+  }
+  var name = fn.name || 'Function wrapped with `once`'
+  f.onceError = name + " shouldn't be called more than once"
+  f.called = false
+  return f
+}
+
+},{"wrappy":20}],17:[function(require,module,exports){
 (function (Buffer){
 ;(function (sax) { // wrapper for non-node envs
   sax.parser = function (strict, opt) { return new SAXParser(strict, opt) }
@@ -2898,9 +3232,509 @@ exports.merge = merge;
 })(typeof exports === 'undefined' ? this.sax = {} : exports)
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":18,"stream":41,"string_decoder":42}],12:[function(require,module,exports){
+},{"buffer":29,"stream":53,"string_decoder":54}],18:[function(require,module,exports){
+(function (Buffer,process){
+'use strict'
+
+exports = module.exports = recognize
+
+exports.withOptions =
+exports.recognizeWithOptions = recognizeWithOptions
+exports.list =
+exports.listLanguages = listLanguages
+exports.recognize = recognize
+exports.default = recognize
+
+const RX_LANG = /^\w*?[a-z]{3}(_[a-z]{3,4})?\w*?$/
+
+const push     = Array.prototype.push,
+      EE       = require('events'),
+      assert   = require('assert'),
+      stream   = require('stream'),
+      Duplex   = stream.Duplex,
+      Readable = stream.Readable,
+      CP       = require('child_process'),
+      exec     = CP.exec,
+      spawn    = CP.spawn,
+      read     = require('fs').createReadStream,
+      once     = require('once'),
+      error    = require('cer'),
+      which    = require('which'),
+      destroy  = require('destroy'),
+      IECE     = error('InvalidExitCodeError', initInvalidExitCodeError)
+
+// make recognize() an EventEmitter to be able to fire 'warning' events when necessary
+Object.setPrototypeOf(recognize, EE.prototype)
+EE.call(recognize)
+
+function initInvalidExitCodeError(message, code, signal, stderr) {
+    this.code     = 'EIEC'
+    this.exitCode = code
+    this.signal   = signal
+    this.stderr   = stderr
+}
+
+function getBinaryPath(options, cb) {
+    const path =
+        options.execPath ||
+        getBinaryPath.resolved
+
+    if (path)
+        cb(null, path)
+    else
+        which('tesseract', (err, path) => {
+            if (!err)
+                getBinaryPath.resolved = path
+
+            cb(err, path)
+        })
+}
+
+function bufferToStream(buffer) {
+    const stream = new Duplex
+    stream.push(buffer)
+    stream.push(null)
+    return stream
+}
+
+function getInputStream(source) {
+    if (typeof source === 'string')
+        return read(source)
+    else if (Buffer.isBuffer(source))
+        return bufferToStream(source)
+    else if (source instanceof Readable)
+        return source
+    else {
+        const err = new TypeError('invalid input source provided. Only file paths (strings), ReadableStreams and Buffers are supported.')
+        err.code = 'EINVI'
+        throw err
+    }
+}
+
+function getArgs(options) {
+    const args = [ 'stdin', 'stdout' ]
+
+    let lang =
+        options.l ||
+        options.lang ||
+        options.language
+
+    if (Array.isArray(lang))
+        lang = lang.join('+')
+
+    if (lang)
+        args.push('-l', lang)
+      
+    const tessdataDir =
+        options.dataDir ||
+        options.tessdataDir ||
+        options.tessDataDir
+
+    if (tessdataDir)
+        args.push('--tessdata-dir', tessdataDir)
+
+    const userWords =
+        options.words ||
+        options.userWords
+
+    if (userWords)
+        args.push('--user-words', userWords)
+
+    const userPatterns =
+        options.patterns ||
+        options.userPatterns
+
+    if (userPatterns)
+        args.push('--user-patterns', userPatterns)
+
+    const psm = +options.psm
+
+    if (!isNaN(psm)) {
+        assert(psm >= 0 && psm <= 13, 'page segmentation mode must be between 0 and 13')
+        args.push('--psm', psm)
+    }
+
+    const oem = +options.oem
+
+    if (!isNaN(oem)) {
+        assert(oem >= 0 && oem <= 3, 'OCR engine mode must be between 0 and 3')
+        args.push('--oem', oem)
+    }
+
+    let confs =
+        options.c ||
+        options.conf ||
+        options.confs ||
+        options.configs
+
+    if (confs) {
+        if (typeof confs === 'string')
+            confs = [ '-c', confs ]
+        else if (Array.isArray(confs))
+            confs = confs.reduce((out, conf) => {
+                out.push('-c', conf)
+                return out
+            }, [])
+        else {
+            assert(confs instanceof Object, 'configs option must be string, array of strings or object')
+
+            const out = []
+
+            for (let key in confs) {
+                /* istanbul ignore next */
+                if (!confs.hasOwnProperty(key))
+                    continue
+
+                out.push('-c', `${key}=${confs[ key ]}`)
+            }
+
+            confs = out
+        }
+
+        push.apply(args, confs)
+    }
+
+    let cfiles =
+        options.configfile ||
+        options.configfiles ||
+        options.configFile ||
+        options.configFiles
+
+    if (cfiles) {
+        if (typeof cfiles === 'string')
+            args.push(cfiles)
+        else {
+            assert(Array.isArray(cfiles), 'configfile option must be string or array of strings')
+
+            push.apply(args, cfiles)
+        }
+    }
+
+    return args
+}
+
+function recognizeWithOptions(options) {
+    return function recognizeWithOptions(source, callback) {
+        return recognize(source, options, callback)
+    }
+}
+
+function recognize(source, options, callback) {
+    assert(source, 'source parameter is required')
+
+    if (typeof options === 'function') {
+        callback = options
+        options = {}
+    }
+
+    if (callback) {
+        assert.equal(typeof callback, 'function', 'callback must be a function')
+        callback = once(callback)
+    }
+
+    return new Promise((resolve, reject) => {
+        getBinaryPath(options, (err, tesseract) => {
+            let child, stream, transform,
+                stdout = '',
+                stderr = ''
+
+            if (err)
+                return onError(err)
+
+            try {
+                // getInputStream() can throw
+                stream = getInputStream(source)
+            }
+            catch (ex) {
+                return onError(ex)
+            }
+
+            child = spawn(tesseract, getArgs(options))
+            transform = stream.pipe(child.stdin)
+
+            child.stdout.on('data', chunk => stdout += chunk)
+            child.stderr.on('data', chunk => stderr += chunk)
+
+            child
+                .on('error', onError)
+                .on('exit', (code, signal) => {
+                    if (code !== 0)
+                        onError(new IECE('tesseract exited with non-zero exit code. See err.exitCode, err.signal or err.stderr for more information', code, signal, stderr))
+                    else {
+                        onExit()
+
+                        process.nextTick(() => {
+                            // tesseract yielded some output through stderr as well,
+                            // which is probably some text representing warning(s)
+                            if (stderr)
+                                recognize.emit('warning', stderr, source, options)
+
+                            if (callback)
+                                callback(null, stdout)
+                            else
+                                resolve(stdout)
+                        })
+                    }
+                })
+
+            stream.on('error', onError)
+            transform.on('error', onError)
+
+            function onError(err) {
+                onExit()
+
+                process.nextTick(() => {
+                    if (callback)
+                        callback(err)
+                    // do not produce unhandledPromiseRejection when a callback is provided
+                    else
+                        reject(err)
+                })
+            }
+
+            function onExit() {
+                if (stream)
+                    destroy(stream)
+
+                if (transform)
+                    destroy(transform)
+            }
+        })
+    })
+}
+
+function listLanguages(execPath, callback) {
+    let options = {}
+
+    if (typeof execPath === 'string')
+        options.execPath = execPath
+    else
+        callback = execPath
+
+    if (callback) {
+        assert.equal(typeof callback, 'function', 'callback must be a function')
+        callback = once(callback)
+    }
+
+    return new Promise((resolve, reject) => {
+        getBinaryPath(options, (err, tesseract) => {
+            if (err)
+                onError(err)
+            else
+                exec(`${tesseract} --list-langs`, (err, stdout, stderr) => {
+                    /* istanbul ignore next */
+                    // hypothetically impossible :) //
+                    if (err)
+                        onError(new IECE('tesseract exited with non-zero exit code. See err.exitCode, err.signal or err.stderr for more information', err.code, err.signal, stderr))
+                    else {
+                        // !HACKERY WARNING!
+                        // due to inconsistencies between
+                        // tesseract implementations across platforms,
+                        // we need to check stderr as well
+                        const list = (stdout || stderr)
+                            .split('\n')
+                            .filter(lang => RX_LANG.test(lang))
+
+                        process.nextTick(() => {
+                            if (callback)
+                                callback(null, list)
+                            else
+                                resolve(list)
+                        })
+                    }
+                })
+        })
+
+        function onError(err) {
+            process.nextTick(() => {
+                if (callback)
+                    callback(err)
+                // do not produce unhandledPromiseRejection when a callback is provided
+                else
+                    reject(err)
+            })
+        }
+    })
+}
+
+}).call(this,{"isBuffer":require("../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js")},require('_process'))
+},{"../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js":34,"_process":38,"assert":26,"cer":1,"child_process":25,"destroy":2,"events":31,"fs":25,"once":16,"stream":53,"which":19}],19:[function(require,module,exports){
+(function (process){
+module.exports = which
+which.sync = whichSync
+
+var isWindows = process.platform === 'win32' ||
+    process.env.OSTYPE === 'cygwin' ||
+    process.env.OSTYPE === 'msys'
+
+var path = require('path')
+var COLON = isWindows ? ';' : ':'
+var isexe = require('isexe')
+
+function getNotFoundError (cmd) {
+  var er = new Error('not found: ' + cmd)
+  er.code = 'ENOENT'
+
+  return er
+}
+
+function getPathInfo (cmd, opt) {
+  var colon = opt.colon || COLON
+  var pathEnv = opt.path || process.env.PATH || ''
+  var pathExt = ['']
+
+  pathEnv = pathEnv.split(colon)
+
+  var pathExtExe = ''
+  if (isWindows) {
+    pathEnv.unshift(process.cwd())
+    pathExtExe = (opt.pathExt || process.env.PATHEXT || '.EXE;.CMD;.BAT;.COM')
+    pathExt = pathExtExe.split(colon)
+
+
+    // Always test the cmd itself first.  isexe will check to make sure
+    // it's found in the pathExt set.
+    if (cmd.indexOf('.') !== -1 && pathExt[0] !== '')
+      pathExt.unshift('')
+  }
+
+  // If it has a slash, then we don't bother searching the pathenv.
+  // just check the file itself, and that's it.
+  if (cmd.match(/\//) || isWindows && cmd.match(/\\/))
+    pathEnv = ['']
+
+  return {
+    env: pathEnv,
+    ext: pathExt,
+    extExe: pathExtExe
+  }
+}
+
+function which (cmd, opt, cb) {
+  if (typeof opt === 'function') {
+    cb = opt
+    opt = {}
+  }
+
+  var info = getPathInfo(cmd, opt)
+  var pathEnv = info.env
+  var pathExt = info.ext
+  var pathExtExe = info.extExe
+  var found = []
+
+  ;(function F (i, l) {
+    if (i === l) {
+      if (opt.all && found.length)
+        return cb(null, found)
+      else
+        return cb(getNotFoundError(cmd))
+    }
+
+    var pathPart = pathEnv[i]
+    if (pathPart.charAt(0) === '"' && pathPart.slice(-1) === '"')
+      pathPart = pathPart.slice(1, -1)
+
+    var p = path.join(pathPart, cmd)
+    if (!pathPart && (/^\.[\\\/]/).test(cmd)) {
+      p = cmd.slice(0, 2) + p
+    }
+    ;(function E (ii, ll) {
+      if (ii === ll) return F(i + 1, l)
+      var ext = pathExt[ii]
+      isexe(p + ext, { pathExt: pathExtExe }, function (er, is) {
+        if (!er && is) {
+          if (opt.all)
+            found.push(p + ext)
+          else
+            return cb(null, p + ext)
+        }
+        return E(ii + 1, ll)
+      })
+    })(0, pathExt.length)
+  })(0, pathEnv.length)
+}
+
+function whichSync (cmd, opt) {
+  opt = opt || {}
+
+  var info = getPathInfo(cmd, opt)
+  var pathEnv = info.env
+  var pathExt = info.ext
+  var pathExtExe = info.extExe
+  var found = []
+
+  for (var i = 0, l = pathEnv.length; i < l; i ++) {
+    var pathPart = pathEnv[i]
+    if (pathPart.charAt(0) === '"' && pathPart.slice(-1) === '"')
+      pathPart = pathPart.slice(1, -1)
+
+    var p = path.join(pathPart, cmd)
+    if (!pathPart && /^\.[\\\/]/.test(cmd)) {
+      p = cmd.slice(0, 2) + p
+    }
+    for (var j = 0, ll = pathExt.length; j < ll; j ++) {
+      var cur = p + pathExt[j]
+      var is
+      try {
+        is = isexe.sync(cur, { pathExt: pathExtExe })
+        if (is) {
+          if (opt.all)
+            found.push(cur)
+          else
+            return cur
+        }
+      } catch (ex) {}
+    }
+  }
+
+  if (opt.all && found.length)
+    return found
+
+  if (opt.nothrow)
+    return null
+
+  throw getNotFoundError(cmd)
+}
+
+}).call(this,require('_process'))
+},{"_process":38,"isexe":13,"path":36}],20:[function(require,module,exports){
+// Returns a wrapper function that returns a wrapped callback
+// The wrapper function should do some stuff, and return a
+// presumably different callback function.
+// This makes sure that own properties are retained, so that
+// decorations and such are not lost along the way.
+module.exports = wrappy
+function wrappy (fn, cb) {
+  if (fn && cb) return wrappy(fn)(cb)
+
+  if (typeof fn !== 'function')
+    throw new TypeError('need wrapper function')
+
+  Object.keys(fn).forEach(function (k) {
+    wrapper[k] = fn[k]
+  })
+
+  return wrapper
+
+  function wrapper() {
+    var args = new Array(arguments.length)
+    for (var i = 0; i < args.length; i++) {
+      args[i] = arguments[i]
+    }
+    var ret = fn.apply(this, args)
+    var cb = args[args.length-1]
+    if (typeof ret === 'function' && ret !== cb) {
+      Object.keys(cb).forEach(function (k) {
+        ret[k] = cb[k]
+      })
+    }
+    return ret
+  }
+}
+
+},{}],21:[function(require,module,exports){
 /* This modules acquires an image file, stores it in a folder (assets), 
-and returns the image's relative path. */ 
+and returns the image's relative path. */
 // @ts-check
 
 // For now, we'll just take a file from our assets folder. 
@@ -2910,24 +3744,28 @@ const imageSource = "./assets/images/i04.jpg";
 // from the device's camera. 
 
 module.exports = imageSource;
-},{}],13:[function(require,module,exports){
 
+},{}],22:[function(require,module,exports){
+/* This module returns a HOCR XML file for a given image file (local) */
 
-const xmlFilePath = "../assets/hocr/";
-const xmlFileName = "i04.hocr";
-// console.log(__dirname + "/../assets/hocr/i04.hocr");
-// Import the XML file
-// const xmlFile = fs.readFileSync(xmlFilePath + xmlFileName, {
-//     encoding: "utf-8"
-// });
-const xmlFile = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"\n    \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n<html xmlns=\"http://www.w3.org/1999/xhtml\" xml:lang=\"en\" lang=\"en\">\n\n<head>\n  <title></title>\n  <meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\" />\n  <meta name='ocr-system' content='tesseract 3.05.01' />\n  <meta name='ocr-capabilities' content='ocr_page ocr_carea ocr_par ocr_line ocrx_word' />\n</head>\n\n<body>\n  <div class='ocr_page' id='page_1' title='image \"IMG_4938.jpg\"; bbox 0 0 4032 3024; ppageno 0'>\n    <div class='ocr_carea' id='block_1_1' title=\"bbox 400 0 3726 199\">\n      <p class='ocr_par' id='par_1_1' lang='eng' title=\"bbox 400 0 3726 199\">\n        <span class='ocr_line' id='line_1_1' title=\"bbox 952 0 3714 53; baseline 0.026 -71; x_size 68; x_descenders 15; x_ascenders 23\">\n          <span class='ocrx_word' id='word_1_1' title='bbox 952 0 1001 10; x_wconf 53'>\n            <strong>v</strong>\n          </span>\n          <span class='ocrx_word' id='word_1_2' title='bbox 1337 0 1366 14; x_wconf 48'>\n            <strong>\n              <em>‘</em>\n            </strong>\n          </span>\n          <span class='ocrx_word' id='word_1_3' title='bbox 1402 0 1430 16; x_wconf 42'>\n            <strong>A</strong>\n          </span>\n          <span class='ocrx_word' id='word_1_4' title='bbox 1727 0 1764 3; x_wconf 24'>V.</span>\n          <span class='ocrx_word' id='word_1_5' title='bbox 1803 0 2121 27; x_wconf 68'>------....,</span>\n          <span class='ocrx_word' id='word_1_6' title='bbox 2163 0 2308 36; x_wconf 48'>r.”</span>\n          <span class='ocrx_word' id='word_1_7' title='bbox 2328 0 2922 50; x_wconf 55'>vuuxvsxuauy.</span>\n          <span class='ocrx_word' id='word_1_8' title='bbox 2967 0 3079 36; x_wconf 68'>we</span>\n          <span class='ocrx_word' id='word_1_9' title='bbox 3118 0 3410 44; x_wconf 65'>CUTLTLOI</span>\n          <span class='ocrx_word' id='word_1_10' title='bbox 3444 0 3714 53; x_wconf 75'>mvent</span>\n        </span>\n        <span class='ocr_line' id='line_1_2' title=\"bbox 400 68 3726 199; baseline 0.015 -51; x_size 97; x_descenders 19; x_ascenders 27\">\n          <span class='ocrx_word' id='word_1_11' title='bbox 400 100 551 156; x_wconf 81'>our</span>\n          <span class='ocrx_word' id='word_1_12' title='bbox 587 96 768 149; x_wconf 78'>own</span>\n          <span class='ocrx_word' id='word_1_13' title='bbox 812 68 1119 162; x_wconf 74'>values,</span>\n          <span class='ocrx_word' id='word_1_14' title='bbox 1170 70 1510 153; x_wconf 86'>because</span>\n          <span class='ocrx_word' id='word_1_15' title='bbox 1552 104 1670 156; x_wconf 79'>we</span>\n          <span class='ocrx_word' id='word_1_16' title='bbox 1711 106 2017 164; x_wconf 82'>cannot</span>\n          <span class='ocrx_word' id='word_1_17' title='bbox 2055 92 2343 188; x_wconf 83'>merely</span>\n          <span class='ocrx_word' id='word_1_18' title='bbox 2383 95 2677 193; x_wconf 79'>impose</span>\n          <span class='ocrx_word' id='word_1_19' title='bbox 2716 104 2936 183; x_wconf 82'>what</span>\n          <span class='ocrx_word' id='word_1_20' title='bbox 2971 134 3085 185; x_wconf 83'>we</span>\n          <span class='ocrx_word' id='word_1_21' title='bbox 3125 110 3408 191; x_wconf 78'>believe</span>\n          <span class='ocrx_word' id='word_1_22' title='bbox 3446 143 3546 195; x_wconf 85'>on</span>\n          <span class='ocrx_word' id='word_1_23' title='bbox 3585 148 3726 199; x_wconf 83'>our</span>\n        </span>\n      </p>\n    </div>\n    <div class='ocr_carea' id='block_1_2' title=\"bbox 343 224 3814 1948\">\n      <p class='ocr_par' id='par_1_2' lang='eng' title=\"bbox 388 224 3740 654\">\n        <span class='ocr_line' id='line_1_3' title=\"bbox 392 224 3731 364; baseline 0.011 -53; x_size 93; x_descenders 14; x_ascenders 25\">\n          <span class='ocrx_word' id='word_1_24' title='bbox 392 229 629 311; x_wconf 82'>souls.</span>\n          <span class='ocrx_word' id='word_1_25' title='bbox 684 224 914 302; x_wconf 88'>\n            <strong>This</strong>\n          </span>\n          <span class='ocrx_word' id='word_1_26' title='bbox 962 250 1144 304; x_wconf 85'>was</span>\n          <span class='ocrx_word' id='word_1_27' title='bbox 1199 227 1413 308; x_wconf 88'>Carl</span>\n          <span class='ocrx_word' id='word_1_28' title='bbox 1455 232 1763 333; x_wconf 84'>Jung’s</span>\n          <span class='ocrx_word' id='word_1_29' title='bbox 1811 259 2058 337; x_wconf 89'>great</span>\n          <span class='ocrx_word' id='word_1_30' title='bbox 2104 243 2940 347; x_wconf 81'>discovery—made</span>\n          <span class='ocrx_word' id='word_1_31' title='bbox 2985 257 3079 335; x_wconf 93'>in</span>\n          <span class='ocrx_word' id='word_1_32' title='bbox 3121 284 3237 337; x_wconf 89'>no</span>\n          <span class='ocrx_word' id='word_1_33' title='bbox 3282 262 3496 343; x_wconf 90'>little</span>\n          <span class='ocrx_word' id='word_1_34' title='bbox 3538 289 3731 364; x_wconf 90'>part</span>\n\n        </span>\n        <span class='ocr_line' id='line_1_4' title=\"bbox 388 381 3545 507; baseline 0.009 -41; x_size 103; x_descenders 21; x_ascenders 28\">\n          <span class='ocrx_word' id='word_1_35' title='bbox 388 389 771 467; x_wconf 84'>because</span>\n          <span class='ocrx_word' id='word_1_36' title='bbox 810 381 916 461; x_wconf 89'>of</span>\n          <span class='ocrx_word' id='word_1_37' title='bbox 936 382 1077 462; x_wconf 91'>his</span>\n          <span class='ocrx_word' id='word_1_38' title='bbox 1116 383 1469 468; x_wconf 91'>intense</span>\n          <span class='ocrx_word' id='word_1_39' title='bbox 1508 392 1775 493; x_wconf 90'>study</span>\n          <span class='ocrx_word' id='word_1_40' title='bbox 1809 395 1912 475; x_wconf 91'>of</span>\n          <span class='ocrx_word' id='word_1_41' title='bbox 1934 396 2086 478; x_wconf 87'>the</span>\n          <span class='ocrx_word' id='word_1_42' title='bbox 2120 401 2566 499; x_wconf 90'>problems</span>\n          <span class='ocrx_word' id='word_1_43' title='bbox 2600 408 2881 504; x_wconf 92'>posed</span>\n          <span class='ocrx_word' id='word_1_44' title='bbox 2911 408 3025 507; x_wconf 93'>by</span>\n          <span class='ocrx_word' id='word_1_45' title='bbox 3054 412 3545 496; x_wconf 89'>Nietzsche.</span>\n        </span>\n\n        <span class='ocr_line' id='line_1_5' title=\"bbox 572 541 3740 654; baseline 0.01 -36; x_size 98; x_descenders 18; x_ascenders 25\">\n          <span class='ocrx_word' id='word_1_46' title='bbox 572 542 727 621; x_wconf 94'>We</span>\n          <span class='ocrx_word' id='word_1_47' title='bbox 758 541 996 621; x_wconf 91'>rebel</span>\n          <span class='ocrx_word' id='word_1_48' title='bbox 1030 544 1374 643; x_wconf 91'>against</span>\n          <span class='ocrx_word' id='word_1_49' title='bbox 1404 573 1570 628; x_wconf 86'>our</span>\n          <span class='ocrx_word' id='word_1_50' title='bbox 1598 576 1802 632; x_wconf 93'>own</span>\n          <span class='ocrx_word' id='word_1_51' title='bbox 1829 556 2551 654; x_wconf 81'>totalitarianism,</span>\n          <span class='ocrx_word' id='word_1_52' title='bbox 2584 586 2673 640; x_wconf 91'>as</span>\n          <span class='ocrx_word' id='word_1_53' title='bbox 2702 563 2966 642; x_wconf 88'>much</span>\n          <span class='ocrx_word' id='word_1_54' title='bbox 2996 589 3084 643; x_wconf 89'>as</span>\n          <span class='ocrx_word' id='word_1_55' title='bbox 3112 565 3296 644; x_wconf 85'>that</span>\n          <span class='ocrx_word' id='word_1_56' title='bbox 3323 567 3419 646; x_wconf 92'>of</span>\n          <span class='ocrx_word' id='word_1_57' title='bbox 3437 570 3740 650; x_wconf 89'>others.</span>\n        </span>\n      </p>\n\n      <p class='ocr_par' id='par_1_3' lang='eng' title=\"bbox 343 703 3814 1948\">\n        <span class='ocr_line' id='line_1_6' title=\"bbox 377 703 3751 823; baseline 0.006 -39; x_size 98; x_descenders 17; x_ascenders 26\">\n          <span class='ocrx_word' id='word_1_58' title='bbox 377 706 414 784; x_wconf 92'>I</span>\n          <span class='ocrx_word' id='word_1_59' title='bbox 445 719 780 783; x_wconf 90'>cannot</span>\n          <span class='ocrx_word' id='word_1_60' title='bbox 808 703 1142 804; x_wconf 91'>merely</span>\n          <span class='ocrx_word' id='word_1_61' title='bbox 1170 706 1433 787; x_wconf 91'>order</span>\n          <span class='ocrx_word' id='word_1_62' title='bbox 1458 711 1784 810; x_wconf 92'>myself</span>\n          <span class='ocrx_word' id='word_1_63' title='bbox 1798 730 1890 793; x_wconf 93'>to</span>\n          <span class='ocrx_word' id='word_1_64' title='bbox 1921 715 2240 811; x_wconf 80'>action,</span>\n          <span class='ocrx_word' id='word_1_65' title='bbox 2273 716 2448 797; x_wconf 91'>and</span>\n          <span class='ocrx_word' id='word_1_66' title='bbox 2474 717 2808 799; x_wconf 91'>neither</span>\n          <span class='ocrx_word' id='word_1_67' title='bbox 2835 743 3000 798; x_wconf 87'>can</span>\n          <span class='ocrx_word' id='word_1_68' title='bbox 3023 744 3218 818; x_wconf 91'>you.</span>\n          <span class='ocrx_word' id='word_1_69' title='bbox 3254 721 3345 799; x_wconf 91'>“I</span>\n          <span class='ocrx_word' id='word_1_70' title='bbox 3369 722 3539 801; x_wconf 88'>will</span>\n          <span class='ocrx_word' id='word_1_71' title='bbox 3566 741 3751 823; x_wconf 89'>stop</span>\n        </span>\n\n        <span class='ocr_line' id='line_1_7' title=\"bbox 369 860 3762 976; baseline 0.004 -32; x_size 103; x_descenders 21; x_ascenders 28\">\n          <span class='ocrx_word' id='word_1_72' title='bbox 369 860 1235 966; x_wconf 80'>procrastinating,”</span>\n          <span class='ocrx_word' id='word_1_73' title='bbox 1282 867 1320 946; x_wconf 97'>I</span>\n          <span class='ocrx_word' id='word_1_74' title='bbox 1364 893 1540 969; x_wconf 80'>say,</span>\n          <span class='ocrx_word' id='word_1_75' title='bbox 1582 869 1748 952; x_wconf 92'>but</span>\n          <span class='ocrx_word' id='word_1_76' title='bbox 1788 872 1826 951; x_wconf 96'>I</span>\n          <span class='ocrx_word' id='word_1_77' title='bbox 1868 872 2145 954; x_wconf 82'>don’t.</span>\n          <span class='ocrx_word' id='word_1_78' title='bbox 2195 874 2289 954; x_wconf 92'>“I</span>\n          <span class='ocrx_word' id='word_1_79' title='bbox 2326 875 2505 955; x_wconf 92'>will</span>\n          <span class='ocrx_word' id='word_1_80' title='bbox 2547 893 2686 956; x_wconf 90'>eat</span>\n          <span class='ocrx_word' id='word_1_81' title='bbox 2723 875 3200 976; x_wconf 84'>properly,”</span>\n          <span class='ocrx_word' id='word_1_82' title='bbox 3244 877 3282 955; x_wconf 94'>I</span>\n          <span class='ocrx_word' id='word_1_83' title='bbox 3322 902 3490 976; x_wconf 84'>say,</span>\n          <span class='ocrx_word' id='word_1_84' title='bbox 3528 878 3689 957; x_wconf 91'>but</span>\n          <span class='ocrx_word' id='word_1_85' title='bbox 3724 879 3762 956; x_wconf 94'>I</span>\n        </span>\n        <span class='ocr_line' id='line_1_8' title=\"bbox 369 1025 3772 1134; baseline 0.001 -26; x_size 99; x_descenders 17; x_ascenders 27\">\n          <span class='ocrx_word' id='word_1_86' title='bbox 369 1025 650 1108; x_wconf 88'>don’t.</span>\n          <span class='ocrx_word' id='word_1_87' title='bbox 689 1025 785 1105; x_wconf 89'>“I</span>\n          <span class='ocrx_word' id='word_1_88' title='bbox 811 1025 997 1106; x_wconf 93'>Will</span>\n          <span class='ocrx_word' id='word_1_89' title='bbox 1027 1026 1210 1108; x_wconf 90'>end</span>\n          <span class='ocrx_word' id='word_1_90' title='bbox 1236 1053 1391 1130; x_wconf 90'>my</span>\n          <span class='ocrx_word' id='word_1_91' title='bbox 1416 1028 1842 1111; x_wconf 88'>drunken</span>\n          <span class='ocrx_word' id='word_1_92' title='bbox 1866 1032 2537 1129; x_wconf 82'>misbehavior,”</span>\n          <span class='ocrx_word' id='word_1_93' title='bbox 2566 1034 2605 1113; x_wconf 95'>I</span>\n          <span class='ocrx_word' id='word_1_94' title='bbox 2631 1058 2801 1134; x_wconf 82'>say,</span>\n          <span class='ocrx_word' id='word_1_95' title='bbox 2826 1034 2989 1114; x_wconf 92'>but</span>\n          <span class='ocrx_word' id='word_1_96' title='bbox 3012 1034 3051 1113; x_wconf 95'>I</span>\n          <span class='ocrx_word' id='word_1_97' title='bbox 3077 1033 3350 1114; x_wconf 84'>don’t.</span>\n          <span class='ocrx_word' id='word_1_98' title='bbox 3379 1034 3419 1112; x_wconf 92'>I</span>\n          <span class='ocrx_word' id='word_1_99' title='bbox 3444 1052 3772 1114; x_wconf 86'>cannot</span>\n        </span>\n        <span class='ocr_line' id='line_1_9' title=\"bbox 362 1187 3782 1293; baseline -0.001 -23; x_size 101; x_descenders 19; x_ascenders 27\">\n          <span class='ocrx_word' id='word_1_100' title='bbox 362 1187 707 1290; x_wconf 87'>merely</span>\n          <span class='ocrx_word' id='word_1_101' title='bbox 752 1187 1029 1269; x_wconf 87'>make</span>\n          <span class='ocrx_word' id='word_1_102' title='bbox 1078 1189 1424 1291; x_wconf 89'>myself</span>\n          <span class='ocrx_word' id='word_1_103' title='bbox 1460 1216 1673 1273; x_wconf 91'>over</span>\n          <span class='ocrx_word' id='word_1_104' title='bbox 1718 1190 1815 1271; x_wconf 92'>in</span>\n          <span class='ocrx_word' id='word_1_105' title='bbox 1859 1191 2015 1272; x_wconf 88'>the</span>\n          <span class='ocrx_word' id='word_1_106' title='bbox 2062 1191 2357 1293; x_wconf 91'>image</span>\n          <span class='ocrx_word' id='word_1_107' title='bbox 2406 1191 2992 1273; x_wconf 84'>constructed</span>\n          <span class='ocrx_word' id='word_1_108' title='bbox 3033 1191 3152 1290; x_wconf 91'>by</span>\n          <span class='ocrx_word' id='word_1_109' title='bbox 3195 1216 3343 1290; x_wconf 88'>my</span>\n          <span class='ocrx_word' id='word_1_110' title='bbox 3387 1189 3782 1270; x_wconf 88'>intellect</span>\n        </span>\n        <span class='ocr_line' id='line_1_10' title=\"bbox 366 1347 3789 1457; baseline -0.002 -22; x_size 104; x_descenders 22; x_ascenders 27\">\n          <span class='ocrx_word' id='word_1_111' title='bbox 366 1351 1018 1457; x_wconf 88'>(particularly</span>\n          <span class='ocrx_word' id='word_1_112' title='bbox 1064 1350 1146 1432; x_wconf 89'>if</span>\n          <span class='ocrx_word' id='word_1_113' title='bbox 1181 1351 1386 1434; x_wconf 86'>that</span>\n          <span class='ocrx_word' id='word_1_114' title='bbox 1432 1351 1841 1433; x_wconf 89'>intellect</span>\n          <span class='ocrx_word' id='word_1_115' title='bbox 1886 1351 1959 1432; x_wconf 91'>is</span>\n          <span class='ocrx_word' id='word_1_116' title='bbox 2006 1351 2490 1453; x_wconf 89'>possessed</span>\n          <span class='ocrx_word' id='word_1_117' title='bbox 2532 1350 2651 1452; x_wconf 93'>by</span>\n          <span class='ocrx_word' id='word_1_118' title='bbox 2697 1375 2814 1431; x_wconf 90'>an</span>\n          <span class='ocrx_word' id='word_1_119' title='bbox 2859 1349 3338 1450; x_wconf 88'>ideology).</span>\n          <span class='ocrx_word' id='word_1_120' title='bbox 3389 1348 3429 1428; x_wconf 92'>I</span>\n          <span class='ocrx_word' id='word_1_121' title='bbox 3470 1347 3693 1428; x_wconf 91'>have</span>\n          <span class='ocrx_word' id='word_1_122' title='bbox 3742 1372 3789 1427; x_wconf 94'>a</span>\n        </span>\n        <span class='ocr_line' id='line_1_11' title=\"bbox 351 1507 3796 1617; baseline -0.004 -16; x_size 98; x_descenders 15; x_ascenders 27\">\n          <span class='ocrx_word' id='word_1_123' title='bbox 351 1537 718 1615; x_wconf 84'>nature,</span>\n          <span class='ocrx_word' id='word_1_124' title='bbox 754 1515 944 1600; x_wconf 91'>and</span>\n          <span class='ocrx_word' id='word_1_125' title='bbox 975 1542 1079 1598; x_wconf 91'>so</span>\n          <span class='ocrx_word' id='word_1_126' title='bbox 1111 1514 1236 1597; x_wconf 90'>do</span>\n          <span class='ocrx_word' id='word_1_127' title='bbox 1263 1540 1478 1617; x_wconf 81'>you,</span>\n          <span class='ocrx_word' id='word_1_128' title='bbox 1513 1512 1697 1596; x_wconf 91'>and</span>\n          <span class='ocrx_word' id='word_1_129' title='bbox 1727 1538 1828 1595; x_wconf 89'>so</span>\n          <span class='ocrx_word' id='word_1_130' title='bbox 1858 1512 1977 1594; x_wconf 90'>do</span>\n          <span class='ocrx_word' id='word_1_131' title='bbox 2005 1537 2137 1594; x_wconf 90'>we</span>\n          <span class='ocrx_word' id='word_1_132' title='bbox 2168 1511 2309 1594; x_wconf 93'>all.</span>\n          <span class='ocrx_word' id='word_1_133' title='bbox 2339 1511 2496 1592; x_wconf 91'>We</span>\n          <span class='ocrx_word' id='word_1_134' title='bbox 2523 1527 2767 1592; x_wconf 91'>must</span>\n          <span class='ocrx_word' id='word_1_135' title='bbox 2794 1509 3200 1591; x_wconf 88'>discover</span>\n          <span class='ocrx_word' id='word_1_136' title='bbox 3224 1507 3421 1589; x_wconf 89'>that</span>\n          <span class='ocrx_word' id='word_1_137' title='bbox 3445 1525 3796 1601; x_wconf 76'>nature,</span>\n        </span>\n        <span class='ocr_line' id='line_1_12' title=\"bbox 350 1665 3805 1776; baseline -0.006 -8; x_size 100; x_descenders 16; x_ascenders 28\">\n          <span class='ocrx_word' id='word_1_138' title='bbox 350 1684 536 1768; x_wconf 91'>and</span>\n          <span class='ocrx_word' id='word_1_139' title='bbox 578 1680 994 1767; x_wconf 89'>contend</span>\n          <span class='ocrx_word' id='word_1_140' title='bbox 1030 1678 1261 1763; x_wconf 92'>with</span>\n          <span class='ocrx_word' id='word_1_141' title='bbox 1299 1678 1398 1776; x_wconf 83'>it,</span>\n          <span class='ocrx_word' id='word_1_142' title='bbox 1438 1675 1753 1759; x_wconf 86'>before</span>\n          <span class='ocrx_word' id='word_1_143' title='bbox 1791 1673 2167 1775; x_wconf 87'>making</span>\n          <span class='ocrx_word' id='word_1_144' title='bbox 2200 1697 2476 1775; x_wconf 89'>peace</span>\n          <span class='ocrx_word' id='word_1_145' title='bbox 2511 1669 2733 1753; x_wconf 90'>with</span>\n          <span class='ocrx_word' id='word_1_146' title='bbox 2768 1668 3250 1752; x_wconf 90'>ourselves.</span>\n          <span class='ocrx_word' id='word_1_147' title='bbox 3287 1667 3566 1749; x_wconf 93'>What</span>\n          <span class='ocrx_word' id='word_1_148' title='bbox 3600 1665 3671 1747; x_wconf 90'>is</span>\n          <span class='ocrx_word' id='word_1_149' title='bbox 3707 1665 3805 1762; x_wconf 79'>it,</span>\n        </span>\n        <span class='ocr_line' id='line_1_13' title=\"bbox 343 1828 3814 1948; baseline -0.008 -11; x_size 107; x_descenders 22; x_ascenders 27\">\n          <span class='ocrx_word' id='word_1_150' title='bbox 343 1852 547 1936; x_wconf 88'>that</span>\n          <span class='ocrx_word' id='word_1_151' title='bbox 585 1877 723 1935; x_wconf 91'>we</span>\n          <span class='ocrx_word' id='word_1_152' title='bbox 765 1865 1020 1932; x_wconf 91'>most</span>\n          <span class='ocrx_word' id='word_1_153' title='bbox 1059 1843 1313 1948; x_wconf 90'>truly</span>\n          <span class='ocrx_word' id='word_1_154' title='bbox 1352 1840 1551 1926; x_wconf 82'>are?</span>\n          <span class='ocrx_word' id='word_1_155' title='bbox 1589 1838 1869 1922; x_wconf 92'>What</span>\n          <span class='ocrx_word' id='word_1_156' title='bbox 1907 1836 1980 1919; x_wconf 89'>is</span>\n          <span class='ocrx_word' id='word_1_157' title='bbox 2021 1836 2088 1918; x_wconf 95'>it</span>\n          <span class='ocrx_word' id='word_1_158' title='bbox 2124 1834 2322 1918; x_wconf 92'>that</span>\n          <span class='ocrx_word' id='word_1_159' title='bbox 2357 1859 2490 1916; x_wconf 90'>we</span>\n          <span class='ocrx_word' id='word_1_160' title='bbox 2532 1830 2806 1915; x_wconf 89'>could</span>\n          <span class='ocrx_word' id='word_1_161' title='bbox 2842 1849 3086 1915; x_wconf 89'>most</span>\n          <span class='ocrx_word' id='word_1_162' title='bbox 3122 1829 3364 1932; x_wconf 89'>truly</span>\n          <span class='ocrx_word' id='word_1_163' title='bbox 3398 1828 3814 1924; x_wconf 79'>become,</span>\n        </span>\n      </p>\n    </div>\n    <div class='ocr_carea' id='block_1_3' title=\"bbox 334 1988 3837 2296\">\n      <p class='ocr_par' id='par_1_4' lang='eng' title=\"bbox 334 1988 3837 2296\">\n        <span class='ocr_line' id='line_1_14' title=\"bbox 339 1988 3837 2125; baseline -0.01 -17; x_size 103; x_descenders 18; x_ascenders 27\">\n          <span class='ocrx_word' id='word_1_164' title='bbox 339 2019 790 2125; x_wconf 88'>knowing</span>\n          <span class='ocrx_word' id='word_1_165' title='bbox 828 2015 1043 2102; x_wconf 90'>who</span>\n          <span class='ocrx_word' id='word_1_166' title='bbox 1086 2039 1225 2098; x_wconf 92'>we</span>\n          <span class='ocrx_word' id='word_1_167' title='bbox 1267 2026 1518 2094; x_wconf 91'>most</span>\n          <span class='ocrx_word' id='word_1_168' title='bbox 1557 2003 1805 2108; x_wconf 86'>truly</span>\n          <span class='ocrx_word' id='word_1_169' title='bbox 1845 2000 2040 2086; x_wconf 83'>are?</span>\n          <span class='ocrx_word' id='word_1_170' title='bbox 2077 1999 2237 2083; x_wconf 87'>We</span>\n          <span class='ocrx_word' id='word_1_171' title='bbox 2278 2015 2525 2081; x_wconf 88'>must</span>\n          <span class='ocrx_word' id='word_1_172' title='bbox 2563 2014 2713 2100; x_wconf 90'>get</span>\n          <span class='ocrx_word' id='word_1_173' title='bbox 2749 2014 2845 2079; x_wconf 91'>to</span>\n          <span class='ocrx_word' id='word_1_174' title='bbox 2885 1994 3043 2079; x_wconf 94'>the</span>\n          <span class='ocrx_word' id='word_1_175' title='bbox 3080 2019 3294 2098; x_wconf 84'>very</span>\n          <span class='ocrx_word' id='word_1_176' title='bbox 3329 1992 3695 2076; x_wconf 87'>bottom</span>\n          <span class='ocrx_word' id='word_1_177' title='bbox 3735 1988 3837 2073; x_wconf 87'>of</span>\n        </span>\n        <span class='ocr_line' id='line_1_15' title=\"bbox 334 2159 3000 2296; baseline -0.012 -19; x_size 111; x_descenders 24; x_ascenders 27\">\n          <span class='ocrx_word' id='word_1_178' title='bbox 334 2190 656 2296; x_wconf 89'>things</span>\n          <span class='ocrx_word' id='word_1_179' title='bbox 696 2185 1023 2273; x_wconf 90'>before</span>\n          <span class='ocrx_word' id='word_1_180' title='bbox 1064 2179 1298 2267; x_wconf 89'>such</span>\n          <span class='ocrx_word' id='word_1_181' title='bbox 1337 2172 1820 2284; x_wconf 90'>questions</span>\n          <span class='ocrx_word' id='word_1_182' title='bbox 1860 2193 2036 2253; x_wconf 88'>can</span>\n          <span class='ocrx_word' id='word_1_183' title='bbox 2068 2164 2186 2249; x_wconf 92'>be</span>\n          <span class='ocrx_word' id='word_1_184' title='bbox 2221 2162 2466 2267; x_wconf 87'>truly</span>\n          <span class='ocrx_word' id='word_1_185' title='bbox 2501 2159 3000 2246; x_wconf 89'>answered.</span>\n        </span>\n      </p>\n    </div>\n    <div class='ocr_carea' id='block_1_4' title=\"bbox 2590 2415 2654 2449\">\n      <p class='ocr_par' id='par_1_5' lang='eng' title=\"bbox 2590 2415 2654 2449\">\n        <span class='ocr_line' id='line_1_16' title=\"bbox 2590 2415 2654 2449; baseline -0.016 -28; x_size 36.25; x_descenders 9.0625; x_ascenders 9.0625\">\n          <span class='ocrx_word' id='word_1_186' title='bbox 2590 2421 2609 2449; x_wconf 47'>\n            <strong>‘</strong>\n          </span>\n          <span class='ocrx_word' id='word_1_187' title='bbox 2647 2415 2654 2420; x_wconf 85'>\n            <strong>\n              <em>.</em>\n            </strong>\n          </span>\n        </span>\n      </p>\n    </div>\n    <div class='ocr_carea' id='block_1_5' title=\"bbox 328 2588 1670 2695\">\n      <p class='ocr_par' id='par_1_6' lang='eng' title=\"bbox 328 2588 1670 2695\">\n        <span class='ocr_line' id='line_1_17' title=\"bbox 328 2588 1670 2695; baseline -0.016 -10; x_size 92.394958; x_descenders 12.394958; x_ascenders 21\">\n          <span class='ocrx_word' id='word_1_188' title='bbox 328 2606 653 2695; x_wconf 86'>Doubt.</span>\n          <span class='ocrx_word' id='word_1_189' title='bbox 697 2604 919 2683; x_wconf 86'>Past</span>\n          <span class='ocrx_word' id='word_1_190' title='bbox 960 2599 1212 2679; x_wconf 85'>Mere</span>\n          <span class='ocrx_word' id='word_1_191' title='bbox 1253 2588 1670 2673; x_wconf 89'>Nihilism</span>\n        </span>\n      </p>\n    </div>\n    <div class='ocr_carea' id='block_1_6' title=\"bbox 3104 2476 4032 3024\">\n      <p class='ocr_par' id='par_1_7' lang='eng' title=\"bbox 3104 2476 4032 3024\">\n        <span class='ocr_line' id='line_1_18' title=\"bbox 3104 2476 4032 2741; baseline 0 283; x_size 117.33333; x_descenders 29.333332; x_ascenders 29.333334\">\n          <span class='ocrx_word' id='word_1_192' title='bbox 3104 2476 4032 2741; x_wconf 95'> </span>\n        </span>\n        <span class='ocr_line' id='line_1_19' title=\"bbox 3134 2741 4032 3024; baseline 0 0; x_size 554; x_descenders 138.5; x_ascenders 138.5\">\n          <span class='ocrx_word' id='word_1_193' title='bbox 3134 2741 4032 3024; x_wconf 95'> </span>\n        </span>\n      </p>\n    </div>\n    <div class='ocr_carea' id='block_1_7' title=\"bbox 320 2835 3104 2975\">\n      <p class='ocr_par' id='par_1_8' lang='eng' title=\"bbox 320 2799 3166 2975\">\n        <span class='ocr_line' id='line_1_20' title=\"bbox 320 2835 3104 2975; baseline -0.018 -8; x_size 110; x_descenders 21; x_ascenders 28\">\n          <span class='ocrx_word' id='word_1_194' title='bbox 320 2875 641 2962; x_wconf 87'>Three</span>\n          <span class='ocrx_word' id='word_1_195' title='bbox 678 2866 1126 2960; x_wconf 87'>hundred</span>\n          <span class='ocrx_word' id='word_1_196' title='bbox 1162 2888 1429 2975; x_wconf 89'>years</span>\n          <span class='ocrx_word' id='word_1_197' title='bbox 1466 2853 1788 2946; x_wconf 91'>before</span>\n          <span class='ocrx_word' id='word_1_198' title='bbox 1824 2842 2359 2945; x_wconf 85'>Nietzsche,</span>\n          <span class='ocrx_word' id='word_1_199' title='bbox 2398 2839 2558 2928; x_wconf 93'>the</span>\n          <span class='ocrx_word' id='word_1_200' title='bbox 2596 2855 2852 2948; x_wconf 90'>great</span>\n          <span class='ocrx_word' id='word_1_201' title='bbox 2883 2835 3057 2922; x_wconf 88'>Fre</span>\n          <span class='ocrx_word' id='word_1_202' title='bbox 3082 2873 3104 2912; x_wconf 75'>.</span>\n        </span>\n      </p>\n    </div>\n    <div class='ocr_carea' id='block_1_8' title=\"bbox 2139 3012 2511 3024\">\n      <p class='ocr_par' id='par_1_9' lang='eng' title=\"bbox 2139 3012 2511 3024\">\n        <span class='ocr_line' id='line_1_21' title=\"bbox 2139 3012 2511 3024; baseline 0 0; x_size 16; x_descenders 4; x_ascenders 4\">\n          <span class='ocrx_word' id='word_1_203' title='bbox 2139 3015 2196 3024; x_wconf 60'>4‘</span>\n          <span class='ocrx_word' id='word_1_204' title='bbox 2490 3012 2511 3024; x_wconf 71'>\n            <em>‘</em>\n          </span>\n        </span>\n      </p>\n    </div>\n  </div>\n</body>\n\n</html>";
-// console.log(xmlFile);
+// Tried the following: 
+// Penteract: does not work properly on macs
+// tesseract.js: issues with the local installation WebWorker
+// tesseractocr works, source https://github.com/schwarzkopfb/tesseract-ocr/blob/HEAD/docs.md
 
-module.exports.endPoint = xmlFile;
-},{}],14:[function(require,module,exports){
+const tesseract = require('tesseractocr');
+const photo = "../assets/images/i04.jpg"; // should be imported from the acquirePhoto module
+
+const recognize = tesseract.withOptions({
+    configfile: "hocr"
+});
+
+module.exports = recognize(photo);
+
+},{"tesseractocr":18}],23:[function(require,module,exports){
 /* This modules renders the HOCR file in a canvas in the browser, 
 and manages the interactions with the user. 
-It does not return anything. */ 
+It does not return anything. */
 
 const xmlParser = require("./xmlparser");
 const canvas = document.getElementById("canvas");
@@ -2959,7 +3797,7 @@ function draw() {
         const imgRatio = img.width / img.height;
         const cvsRatio = canvas.width / canvas.height;
         if (imgRatio > cvsRatio) {
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.width / imgRatio)
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.width / imgRatio);
             w = canvas.width / img.width;
             h = canvas.width / imgRatio / img.height;
         } else {
@@ -3054,101 +3892,598 @@ function getCursorPosition(canvas, event) {
         y: y
     };
 }
-},{"./acquirePhoto":12,"./xmlparser":15}],15:[function(require,module,exports){
-const importXML = require("./importXML");
-const xml = importXML.endPoint;
 
-const et = require('elementtree');
-// const XML = et.XML;
-// const ElementTree = et.ElementTree;
-// const element = et.Element;
-// const subElement = et.SubElement;
+},{"./acquirePhoto":21,"./xmlparser":24}],24:[function(require,module,exports){
+var ocr = require("./ocrPhoto");
+console.log(ocr);
 
-const etree = et.parse(xml);
-const wordElements = etree.findall(".//span/[@class='ocrx_word']"); // collection
+ocr.then(function (xml) {
 
-const wordObjectsList = buildWordObjectsList(wordElements);
-// console.log(wordForCoordinates(wordObjectsList, 813, 69))
+    const et = require('elementtree');
+    const etree = et.parse(xml);
+    // console.log(xml);
+    const wordElements = etree.findall(".//span/[@class='ocrx_word']"); // collection
+    // console.log(wordElements);
+    const wordObjectsList = buildWordObjectsList(wordElements);
+    // console.log(wordForCoordinates(wordObjectsList, 813, 69))
 
-function buildWordObjectsList(wordElements) {
-    /* Returns collection of objects in the form 
-    [{
-        xA: 392,
-        yA: 229,
-        xB: 629,
-        yB: 311,
-        word_id: 24,
-        confidence: 82,
-        word: "souls.",
-        highlighted: false
-    }] */
-    let res = [];
-    wordElements.map(el => {
-        let titleNumbers = el.attrib.title.match(/\d+/g); // get all the numbers in the "title" property
-        res.push({
-            xA: parseInt(titleNumbers[0]),
-            yA: parseInt(titleNumbers[1]),
-            xB: parseInt(titleNumbers[2]),
-            yB: parseInt(titleNumbers[3]),
-            word_id: parseInt(el.attrib.id.match(/\d+$/)[0]),
-            confidence: parseInt(titleNumbers[4]),
-            word: el.text,
+    function buildWordObjectsList(wordElements) {
+        /* Returns collection of objects in the form 
+        [{
+            xA: 392,
+            yA: 229,
+            xB: 629,
+            yB: 311,
+            word_id: 24,
+            confidence: 82,
+            word: "souls.",
             highlighted: false
-        })
-    }); // array
-    // console.log(res);
-    return res;
-}
-
-function wordForCoordinates(x, y) {
-    /* Input: [x, y] coordinates
-    Output: corresponding word element (an object) */
-    const wordCount = wordObjectsList.length;
-    if (wordCount === 0) {
-        return undefined;
-    };
-
-    // SIMPLE ENUMERATION METHOD
-    let el;
-    for (i = 0; i < wordCount; i++) {
-        el = wordObjectsList[i];
-        // adjust word 4 coordinates with w and h
-        let xA = el.xA,
-            yA = el.yA,
-            xB = el.xB,
-            yB = el.yB;
-        // console.log([xA, yA, xB, yB]);
-
-        // if x, y are within the bbox
-        if (x >= xA && x <= xB && y >= yA && y <= yB) {
-            // console.log("The word corresponding to these coordinates x", x, "and y", y, "is: ", el);
-            return el;
-        }
+        }] */
+        let res = [];
+        wordElements.map(el => {
+            let titleNumbers = el.attrib.title.match(/\d+/g); // get all the numbers in the "title" property
+            res.push({
+                xA: parseInt(titleNumbers[0]),
+                yA: parseInt(titleNumbers[1]),
+                xB: parseInt(titleNumbers[2]),
+                yB: parseInt(titleNumbers[3]),
+                word_id: parseInt(el.attrib.id.match(/\d+$/)[0]),
+                confidence: parseInt(titleNumbers[4]),
+                word: el.text,
+                highlighted: false
+            });
+        }); // array
+        // console.log(res);
+        return res;
     }
-    // console.log("There was no word corresponding to these coordinates x", x, "and y", y)
-    return undefined;
 
-    // BISECTION METHOD (faster)
-}
+    function wordForCoordinates(x, y) {
+        /* Input: [x, y] coordinates
+        Output: corresponding word element (an object) */
+        const wordCount = wordObjectsList.length;
+        if (wordCount === 0) {
+            return undefined;
+        };
 
-function wordsElementsBetween(startWordId, endWordId) {
-    /* this function returns all the words objects for words between
-    the startWord and the endWord */
-    let res = [];
-    wordObjectsList.forEach(wordEl => {
-        if (wordEl.word_id >= startWordId && wordEl.word_id <= endWordId) {
-            res.push(wordEl);
+        // SIMPLE ENUMERATION METHOD
+        let el;
+        for (i = 0; i < wordCount; i++) {
+            el = wordObjectsList[i];
+            // adjust word 4 coordinates with w and h
+            let xA = el.xA,
+                yA = el.yA,
+                xB = el.xB,
+                yB = el.yB;
+            // console.log([xA, yA, xB, yB]);
+
+            // if x, y are within the bbox
+            if (x >= xA && x <= xB && y >= yA && y <= yB) {
+                // console.log("The word corresponding to these coordinates x", x, "and y", y, "is: ", el);
+                return el;
+            }
         }
-    });
-    return res;
+        // console.log("There was no word corresponding to these coordinates x", x, "and y", y)
+        return undefined;
+
+        // BISECTION METHOD (faster)
+    }
+
+    function wordsElementsBetween(startWordId, endWordId) {
+        /* this function returns all the words objects for words between
+        the startWord and the endWord */
+        let res = [];
+        wordObjectsList.forEach(wordEl => {
+            if (wordEl.word_id >= startWordId && wordEl.word_id <= endWordId) {
+                res.push(wordEl);
+            }
+        });
+        return res;
+    }
+
+    module.exports = {
+        wordObjectsList,
+        wordForCoordinates,
+        wordsElementsBetween
+    };
+});
+
+},{"./ocrPhoto":22,"elementtree":5}],25:[function(require,module,exports){
+
+},{}],26:[function(require,module,exports){
+(function (global){
+'use strict';
+
+// compare and isBuffer taken from https://github.com/feross/buffer/blob/680e9e5e488f22aac27599a57dc844a6315928dd/index.js
+// original notice:
+
+/*!
+ * The buffer module from node.js, for the browser.
+ *
+ * @author   Feross Aboukhadijeh <feross@feross.org> <http://feross.org>
+ * @license  MIT
+ */
+function compare(a, b) {
+  if (a === b) {
+    return 0;
+  }
+
+  var x = a.length;
+  var y = b.length;
+
+  for (var i = 0, len = Math.min(x, y); i < len; ++i) {
+    if (a[i] !== b[i]) {
+      x = a[i];
+      y = b[i];
+      break;
+    }
+  }
+
+  if (x < y) {
+    return -1;
+  }
+  if (y < x) {
+    return 1;
+  }
+  return 0;
+}
+function isBuffer(b) {
+  if (global.Buffer && typeof global.Buffer.isBuffer === 'function') {
+    return global.Buffer.isBuffer(b);
+  }
+  return !!(b != null && b._isBuffer);
 }
 
-module.exports = {
-    wordObjectsList,
-    wordForCoordinates,
-    wordsElementsBetween
+// based on node assert, original notice:
+
+// http://wiki.commonjs.org/wiki/Unit_Testing/1.0
+//
+// THIS IS NOT TESTED NOR LIKELY TO WORK OUTSIDE V8!
+//
+// Originally from narwhal.js (http://narwhaljs.org)
+// Copyright (c) 2009 Thomas Robinson <280north.com>
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the 'Software'), to
+// deal in the Software without restriction, including without limitation the
+// rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+// sell copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+// ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+var util = require('util/');
+var hasOwn = Object.prototype.hasOwnProperty;
+var pSlice = Array.prototype.slice;
+var functionsHaveNames = (function () {
+  return function foo() {}.name === 'foo';
+}());
+function pToString (obj) {
+  return Object.prototype.toString.call(obj);
+}
+function isView(arrbuf) {
+  if (isBuffer(arrbuf)) {
+    return false;
+  }
+  if (typeof global.ArrayBuffer !== 'function') {
+    return false;
+  }
+  if (typeof ArrayBuffer.isView === 'function') {
+    return ArrayBuffer.isView(arrbuf);
+  }
+  if (!arrbuf) {
+    return false;
+  }
+  if (arrbuf instanceof DataView) {
+    return true;
+  }
+  if (arrbuf.buffer && arrbuf.buffer instanceof ArrayBuffer) {
+    return true;
+  }
+  return false;
+}
+// 1. The assert module provides functions that throw
+// AssertionError's when particular conditions are not met. The
+// assert module must conform to the following interface.
+
+var assert = module.exports = ok;
+
+// 2. The AssertionError is defined in assert.
+// new assert.AssertionError({ message: message,
+//                             actual: actual,
+//                             expected: expected })
+
+var regex = /\s*function\s+([^\(\s]*)\s*/;
+// based on https://github.com/ljharb/function.prototype.name/blob/adeeeec8bfcc6068b187d7d9fb3d5bb1d3a30899/implementation.js
+function getName(func) {
+  if (!util.isFunction(func)) {
+    return;
+  }
+  if (functionsHaveNames) {
+    return func.name;
+  }
+  var str = func.toString();
+  var match = str.match(regex);
+  return match && match[1];
+}
+assert.AssertionError = function AssertionError(options) {
+  this.name = 'AssertionError';
+  this.actual = options.actual;
+  this.expected = options.expected;
+  this.operator = options.operator;
+  if (options.message) {
+    this.message = options.message;
+    this.generatedMessage = false;
+  } else {
+    this.message = getMessage(this);
+    this.generatedMessage = true;
+  }
+  var stackStartFunction = options.stackStartFunction || fail;
+  if (Error.captureStackTrace) {
+    Error.captureStackTrace(this, stackStartFunction);
+  } else {
+    // non v8 browsers so we can have a stacktrace
+    var err = new Error();
+    if (err.stack) {
+      var out = err.stack;
+
+      // try to strip useless frames
+      var fn_name = getName(stackStartFunction);
+      var idx = out.indexOf('\n' + fn_name);
+      if (idx >= 0) {
+        // once we have located the function frame
+        // we need to strip out everything before it (and its line)
+        var next_line = out.indexOf('\n', idx + 1);
+        out = out.substring(next_line + 1);
+      }
+
+      this.stack = out;
+    }
+  }
 };
-},{"./importXML":13,"elementtree":3}],16:[function(require,module,exports){
+
+// assert.AssertionError instanceof Error
+util.inherits(assert.AssertionError, Error);
+
+function truncate(s, n) {
+  if (typeof s === 'string') {
+    return s.length < n ? s : s.slice(0, n);
+  } else {
+    return s;
+  }
+}
+function inspect(something) {
+  if (functionsHaveNames || !util.isFunction(something)) {
+    return util.inspect(something);
+  }
+  var rawname = getName(something);
+  var name = rawname ? ': ' + rawname : '';
+  return '[Function' +  name + ']';
+}
+function getMessage(self) {
+  return truncate(inspect(self.actual), 128) + ' ' +
+         self.operator + ' ' +
+         truncate(inspect(self.expected), 128);
+}
+
+// At present only the three keys mentioned above are used and
+// understood by the spec. Implementations or sub modules can pass
+// other keys to the AssertionError's constructor - they will be
+// ignored.
+
+// 3. All of the following functions must throw an AssertionError
+// when a corresponding condition is not met, with a message that
+// may be undefined if not provided.  All assertion methods provide
+// both the actual and expected values to the assertion error for
+// display purposes.
+
+function fail(actual, expected, message, operator, stackStartFunction) {
+  throw new assert.AssertionError({
+    message: message,
+    actual: actual,
+    expected: expected,
+    operator: operator,
+    stackStartFunction: stackStartFunction
+  });
+}
+
+// EXTENSION! allows for well behaved errors defined elsewhere.
+assert.fail = fail;
+
+// 4. Pure assertion tests whether a value is truthy, as determined
+// by !!guard.
+// assert.ok(guard, message_opt);
+// This statement is equivalent to assert.equal(true, !!guard,
+// message_opt);. To test strictly for the value true, use
+// assert.strictEqual(true, guard, message_opt);.
+
+function ok(value, message) {
+  if (!value) fail(value, true, message, '==', assert.ok);
+}
+assert.ok = ok;
+
+// 5. The equality assertion tests shallow, coercive equality with
+// ==.
+// assert.equal(actual, expected, message_opt);
+
+assert.equal = function equal(actual, expected, message) {
+  if (actual != expected) fail(actual, expected, message, '==', assert.equal);
+};
+
+// 6. The non-equality assertion tests for whether two objects are not equal
+// with != assert.notEqual(actual, expected, message_opt);
+
+assert.notEqual = function notEqual(actual, expected, message) {
+  if (actual == expected) {
+    fail(actual, expected, message, '!=', assert.notEqual);
+  }
+};
+
+// 7. The equivalence assertion tests a deep equality relation.
+// assert.deepEqual(actual, expected, message_opt);
+
+assert.deepEqual = function deepEqual(actual, expected, message) {
+  if (!_deepEqual(actual, expected, false)) {
+    fail(actual, expected, message, 'deepEqual', assert.deepEqual);
+  }
+};
+
+assert.deepStrictEqual = function deepStrictEqual(actual, expected, message) {
+  if (!_deepEqual(actual, expected, true)) {
+    fail(actual, expected, message, 'deepStrictEqual', assert.deepStrictEqual);
+  }
+};
+
+function _deepEqual(actual, expected, strict, memos) {
+  // 7.1. All identical values are equivalent, as determined by ===.
+  if (actual === expected) {
+    return true;
+  } else if (isBuffer(actual) && isBuffer(expected)) {
+    return compare(actual, expected) === 0;
+
+  // 7.2. If the expected value is a Date object, the actual value is
+  // equivalent if it is also a Date object that refers to the same time.
+  } else if (util.isDate(actual) && util.isDate(expected)) {
+    return actual.getTime() === expected.getTime();
+
+  // 7.3 If the expected value is a RegExp object, the actual value is
+  // equivalent if it is also a RegExp object with the same source and
+  // properties (`global`, `multiline`, `lastIndex`, `ignoreCase`).
+  } else if (util.isRegExp(actual) && util.isRegExp(expected)) {
+    return actual.source === expected.source &&
+           actual.global === expected.global &&
+           actual.multiline === expected.multiline &&
+           actual.lastIndex === expected.lastIndex &&
+           actual.ignoreCase === expected.ignoreCase;
+
+  // 7.4. Other pairs that do not both pass typeof value == 'object',
+  // equivalence is determined by ==.
+  } else if ((actual === null || typeof actual !== 'object') &&
+             (expected === null || typeof expected !== 'object')) {
+    return strict ? actual === expected : actual == expected;
+
+  // If both values are instances of typed arrays, wrap their underlying
+  // ArrayBuffers in a Buffer each to increase performance
+  // This optimization requires the arrays to have the same type as checked by
+  // Object.prototype.toString (aka pToString). Never perform binary
+  // comparisons for Float*Arrays, though, since e.g. +0 === -0 but their
+  // bit patterns are not identical.
+  } else if (isView(actual) && isView(expected) &&
+             pToString(actual) === pToString(expected) &&
+             !(actual instanceof Float32Array ||
+               actual instanceof Float64Array)) {
+    return compare(new Uint8Array(actual.buffer),
+                   new Uint8Array(expected.buffer)) === 0;
+
+  // 7.5 For all other Object pairs, including Array objects, equivalence is
+  // determined by having the same number of owned properties (as verified
+  // with Object.prototype.hasOwnProperty.call), the same set of keys
+  // (although not necessarily the same order), equivalent values for every
+  // corresponding key, and an identical 'prototype' property. Note: this
+  // accounts for both named and indexed properties on Arrays.
+  } else if (isBuffer(actual) !== isBuffer(expected)) {
+    return false;
+  } else {
+    memos = memos || {actual: [], expected: []};
+
+    var actualIndex = memos.actual.indexOf(actual);
+    if (actualIndex !== -1) {
+      if (actualIndex === memos.expected.indexOf(expected)) {
+        return true;
+      }
+    }
+
+    memos.actual.push(actual);
+    memos.expected.push(expected);
+
+    return objEquiv(actual, expected, strict, memos);
+  }
+}
+
+function isArguments(object) {
+  return Object.prototype.toString.call(object) == '[object Arguments]';
+}
+
+function objEquiv(a, b, strict, actualVisitedObjects) {
+  if (a === null || a === undefined || b === null || b === undefined)
+    return false;
+  // if one is a primitive, the other must be same
+  if (util.isPrimitive(a) || util.isPrimitive(b))
+    return a === b;
+  if (strict && Object.getPrototypeOf(a) !== Object.getPrototypeOf(b))
+    return false;
+  var aIsArgs = isArguments(a);
+  var bIsArgs = isArguments(b);
+  if ((aIsArgs && !bIsArgs) || (!aIsArgs && bIsArgs))
+    return false;
+  if (aIsArgs) {
+    a = pSlice.call(a);
+    b = pSlice.call(b);
+    return _deepEqual(a, b, strict);
+  }
+  var ka = objectKeys(a);
+  var kb = objectKeys(b);
+  var key, i;
+  // having the same number of owned properties (keys incorporates
+  // hasOwnProperty)
+  if (ka.length !== kb.length)
+    return false;
+  //the same set of keys (although not necessarily the same order),
+  ka.sort();
+  kb.sort();
+  //~~~cheap key test
+  for (i = ka.length - 1; i >= 0; i--) {
+    if (ka[i] !== kb[i])
+      return false;
+  }
+  //equivalent values for every corresponding key, and
+  //~~~possibly expensive deep test
+  for (i = ka.length - 1; i >= 0; i--) {
+    key = ka[i];
+    if (!_deepEqual(a[key], b[key], strict, actualVisitedObjects))
+      return false;
+  }
+  return true;
+}
+
+// 8. The non-equivalence assertion tests for any deep inequality.
+// assert.notDeepEqual(actual, expected, message_opt);
+
+assert.notDeepEqual = function notDeepEqual(actual, expected, message) {
+  if (_deepEqual(actual, expected, false)) {
+    fail(actual, expected, message, 'notDeepEqual', assert.notDeepEqual);
+  }
+};
+
+assert.notDeepStrictEqual = notDeepStrictEqual;
+function notDeepStrictEqual(actual, expected, message) {
+  if (_deepEqual(actual, expected, true)) {
+    fail(actual, expected, message, 'notDeepStrictEqual', notDeepStrictEqual);
+  }
+}
+
+
+// 9. The strict equality assertion tests strict equality, as determined by ===.
+// assert.strictEqual(actual, expected, message_opt);
+
+assert.strictEqual = function strictEqual(actual, expected, message) {
+  if (actual !== expected) {
+    fail(actual, expected, message, '===', assert.strictEqual);
+  }
+};
+
+// 10. The strict non-equality assertion tests for strict inequality, as
+// determined by !==.  assert.notStrictEqual(actual, expected, message_opt);
+
+assert.notStrictEqual = function notStrictEqual(actual, expected, message) {
+  if (actual === expected) {
+    fail(actual, expected, message, '!==', assert.notStrictEqual);
+  }
+};
+
+function expectedException(actual, expected) {
+  if (!actual || !expected) {
+    return false;
+  }
+
+  if (Object.prototype.toString.call(expected) == '[object RegExp]') {
+    return expected.test(actual);
+  }
+
+  try {
+    if (actual instanceof expected) {
+      return true;
+    }
+  } catch (e) {
+    // Ignore.  The instanceof check doesn't work for arrow functions.
+  }
+
+  if (Error.isPrototypeOf(expected)) {
+    return false;
+  }
+
+  return expected.call({}, actual) === true;
+}
+
+function _tryBlock(block) {
+  var error;
+  try {
+    block();
+  } catch (e) {
+    error = e;
+  }
+  return error;
+}
+
+function _throws(shouldThrow, block, expected, message) {
+  var actual;
+
+  if (typeof block !== 'function') {
+    throw new TypeError('"block" argument must be a function');
+  }
+
+  if (typeof expected === 'string') {
+    message = expected;
+    expected = null;
+  }
+
+  actual = _tryBlock(block);
+
+  message = (expected && expected.name ? ' (' + expected.name + ').' : '.') +
+            (message ? ' ' + message : '.');
+
+  if (shouldThrow && !actual) {
+    fail(actual, expected, 'Missing expected exception' + message);
+  }
+
+  var userProvidedMessage = typeof message === 'string';
+  var isUnwantedException = !shouldThrow && util.isError(actual);
+  var isUnexpectedException = !shouldThrow && actual && !expected;
+
+  if ((isUnwantedException &&
+      userProvidedMessage &&
+      expectedException(actual, expected)) ||
+      isUnexpectedException) {
+    fail(actual, expected, 'Got unwanted exception' + message);
+  }
+
+  if ((shouldThrow && actual && expected &&
+      !expectedException(actual, expected)) || (!shouldThrow && actual)) {
+    throw actual;
+  }
+}
+
+// 11. Expected to throw an error:
+// assert.throws(block, Error_opt, message_opt);
+
+assert.throws = function(block, /*optional*/error, /*optional*/message) {
+  _throws(true, block, error, message);
+};
+
+// EXTENSION! This is annoying to write outside this module.
+assert.doesNotThrow = function(block, /*optional*/error, /*optional*/message) {
+  _throws(false, block, error, message);
+};
+
+assert.ifError = function(err) { if (err) throw err; };
+
+var objectKeys = Object.keys || function (obj) {
+  var keys = [];
+  for (var key in obj) {
+    if (hasOwn.call(obj, key)) keys.push(key);
+  }
+  return keys;
+};
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{"util/":58}],27:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -3301,9 +4636,9 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],17:[function(require,module,exports){
-
-},{}],18:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
+arguments[4][25][0].apply(exports,arguments)
+},{"dup":25}],29:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -5041,7 +6376,7 @@ function numberIsNaN (obj) {
   return obj !== obj // eslint-disable-line no-self-compare
 }
 
-},{"base64-js":16,"ieee754":21}],19:[function(require,module,exports){
+},{"base64-js":27,"ieee754":32}],30:[function(require,module,exports){
 (function (Buffer){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -5152,7 +6487,7 @@ function objectToString(o) {
 }
 
 }).call(this,{"isBuffer":require("../../is-buffer/index.js")})
-},{"../../is-buffer/index.js":23}],20:[function(require,module,exports){
+},{"../../is-buffer/index.js":34}],31:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -5673,7 +7008,7 @@ function functionBindPolyfill(context) {
   };
 }
 
-},{}],21:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = (nBytes * 8) - mLen - 1
@@ -5759,7 +7094,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],22:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -5784,7 +7119,7 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],23:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 /*!
  * Determine if an object is a Buffer
  *
@@ -5807,14 +7142,242 @@ function isSlowBuffer (obj) {
   return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
 }
 
-},{}],24:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 var toString = {}.toString;
 
 module.exports = Array.isArray || function (arr) {
   return toString.call(arr) == '[object Array]';
 };
 
-},{}],25:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
+(function (process){
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+// resolves . and .. elements in a path array with directory names there
+// must be no slashes, empty elements, or device names (c:\) in the array
+// (so also no leading and trailing slashes - it does not distinguish
+// relative and absolute paths)
+function normalizeArray(parts, allowAboveRoot) {
+  // if the path tries to go above the root, `up` ends up > 0
+  var up = 0;
+  for (var i = parts.length - 1; i >= 0; i--) {
+    var last = parts[i];
+    if (last === '.') {
+      parts.splice(i, 1);
+    } else if (last === '..') {
+      parts.splice(i, 1);
+      up++;
+    } else if (up) {
+      parts.splice(i, 1);
+      up--;
+    }
+  }
+
+  // if the path is allowed to go above the root, restore leading ..s
+  if (allowAboveRoot) {
+    for (; up--; up) {
+      parts.unshift('..');
+    }
+  }
+
+  return parts;
+}
+
+// Split a filename into [root, dir, basename, ext], unix version
+// 'root' is just a slash, or nothing.
+var splitPathRe =
+    /^(\/?|)([\s\S]*?)((?:\.{1,2}|[^\/]+?|)(\.[^.\/]*|))(?:[\/]*)$/;
+var splitPath = function(filename) {
+  return splitPathRe.exec(filename).slice(1);
+};
+
+// path.resolve([from ...], to)
+// posix version
+exports.resolve = function() {
+  var resolvedPath = '',
+      resolvedAbsolute = false;
+
+  for (var i = arguments.length - 1; i >= -1 && !resolvedAbsolute; i--) {
+    var path = (i >= 0) ? arguments[i] : process.cwd();
+
+    // Skip empty and invalid entries
+    if (typeof path !== 'string') {
+      throw new TypeError('Arguments to path.resolve must be strings');
+    } else if (!path) {
+      continue;
+    }
+
+    resolvedPath = path + '/' + resolvedPath;
+    resolvedAbsolute = path.charAt(0) === '/';
+  }
+
+  // At this point the path should be resolved to a full absolute path, but
+  // handle relative paths to be safe (might happen when process.cwd() fails)
+
+  // Normalize the path
+  resolvedPath = normalizeArray(filter(resolvedPath.split('/'), function(p) {
+    return !!p;
+  }), !resolvedAbsolute).join('/');
+
+  return ((resolvedAbsolute ? '/' : '') + resolvedPath) || '.';
+};
+
+// path.normalize(path)
+// posix version
+exports.normalize = function(path) {
+  var isAbsolute = exports.isAbsolute(path),
+      trailingSlash = substr(path, -1) === '/';
+
+  // Normalize the path
+  path = normalizeArray(filter(path.split('/'), function(p) {
+    return !!p;
+  }), !isAbsolute).join('/');
+
+  if (!path && !isAbsolute) {
+    path = '.';
+  }
+  if (path && trailingSlash) {
+    path += '/';
+  }
+
+  return (isAbsolute ? '/' : '') + path;
+};
+
+// posix version
+exports.isAbsolute = function(path) {
+  return path.charAt(0) === '/';
+};
+
+// posix version
+exports.join = function() {
+  var paths = Array.prototype.slice.call(arguments, 0);
+  return exports.normalize(filter(paths, function(p, index) {
+    if (typeof p !== 'string') {
+      throw new TypeError('Arguments to path.join must be strings');
+    }
+    return p;
+  }).join('/'));
+};
+
+
+// path.relative(from, to)
+// posix version
+exports.relative = function(from, to) {
+  from = exports.resolve(from).substr(1);
+  to = exports.resolve(to).substr(1);
+
+  function trim(arr) {
+    var start = 0;
+    for (; start < arr.length; start++) {
+      if (arr[start] !== '') break;
+    }
+
+    var end = arr.length - 1;
+    for (; end >= 0; end--) {
+      if (arr[end] !== '') break;
+    }
+
+    if (start > end) return [];
+    return arr.slice(start, end - start + 1);
+  }
+
+  var fromParts = trim(from.split('/'));
+  var toParts = trim(to.split('/'));
+
+  var length = Math.min(fromParts.length, toParts.length);
+  var samePartsLength = length;
+  for (var i = 0; i < length; i++) {
+    if (fromParts[i] !== toParts[i]) {
+      samePartsLength = i;
+      break;
+    }
+  }
+
+  var outputParts = [];
+  for (var i = samePartsLength; i < fromParts.length; i++) {
+    outputParts.push('..');
+  }
+
+  outputParts = outputParts.concat(toParts.slice(samePartsLength));
+
+  return outputParts.join('/');
+};
+
+exports.sep = '/';
+exports.delimiter = ':';
+
+exports.dirname = function(path) {
+  var result = splitPath(path),
+      root = result[0],
+      dir = result[1];
+
+  if (!root && !dir) {
+    // No dirname whatsoever
+    return '.';
+  }
+
+  if (dir) {
+    // It has a dirname, strip trailing slash
+    dir = dir.substr(0, dir.length - 1);
+  }
+
+  return root + dir;
+};
+
+
+exports.basename = function(path, ext) {
+  var f = splitPath(path)[2];
+  // TODO: make this comparison case-insensitive on windows?
+  if (ext && f.substr(-1 * ext.length) === ext) {
+    f = f.substr(0, f.length - ext.length);
+  }
+  return f;
+};
+
+
+exports.extname = function(path) {
+  return splitPath(path)[3];
+};
+
+function filter (xs, f) {
+    if (xs.filter) return xs.filter(f);
+    var res = [];
+    for (var i = 0; i < xs.length; i++) {
+        if (f(xs[i], i, xs)) res.push(xs[i]);
+    }
+    return res;
+}
+
+// String.prototype.substr - negative index don't work in IE8
+var substr = 'ab'.substr(-1) === 'b'
+    ? function (str, start, len) { return str.substr(start, len) }
+    : function (str, start, len) {
+        if (start < 0) start = str.length + start;
+        return str.substr(start, len);
+    }
+;
+
+}).call(this,require('_process'))
+},{"_process":38}],37:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -5862,7 +7425,7 @@ function nextTick(fn, arg1, arg2, arg3) {
 
 
 }).call(this,require('_process'))
-},{"_process":26}],26:[function(require,module,exports){
+},{"_process":38}],38:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -6048,10 +7611,10 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],27:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 module.exports = require('./lib/_stream_duplex.js');
 
-},{"./lib/_stream_duplex.js":28}],28:[function(require,module,exports){
+},{"./lib/_stream_duplex.js":40}],40:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -6183,7 +7746,7 @@ Duplex.prototype._destroy = function (err, cb) {
 
   pna.nextTick(cb, err);
 };
-},{"./_stream_readable":30,"./_stream_writable":32,"core-util-is":19,"inherits":22,"process-nextick-args":25}],29:[function(require,module,exports){
+},{"./_stream_readable":42,"./_stream_writable":44,"core-util-is":30,"inherits":33,"process-nextick-args":37}],41:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -6231,7 +7794,7 @@ function PassThrough(options) {
 PassThrough.prototype._transform = function (chunk, encoding, cb) {
   cb(null, chunk);
 };
-},{"./_stream_transform":31,"core-util-is":19,"inherits":22}],30:[function(require,module,exports){
+},{"./_stream_transform":43,"core-util-is":30,"inherits":33}],42:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -7253,7 +8816,7 @@ function indexOf(xs, x) {
   return -1;
 }
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./_stream_duplex":28,"./internal/streams/BufferList":33,"./internal/streams/destroy":34,"./internal/streams/stream":35,"_process":26,"core-util-is":19,"events":20,"inherits":22,"isarray":24,"process-nextick-args":25,"safe-buffer":40,"string_decoder/":42,"util":17}],31:[function(require,module,exports){
+},{"./_stream_duplex":40,"./internal/streams/BufferList":45,"./internal/streams/destroy":46,"./internal/streams/stream":47,"_process":38,"core-util-is":30,"events":31,"inherits":33,"isarray":35,"process-nextick-args":37,"safe-buffer":52,"string_decoder/":54,"util":28}],43:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -7468,7 +9031,7 @@ function done(stream, er, data) {
 
   return stream.push(null);
 }
-},{"./_stream_duplex":28,"core-util-is":19,"inherits":22}],32:[function(require,module,exports){
+},{"./_stream_duplex":40,"core-util-is":30,"inherits":33}],44:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -8158,7 +9721,7 @@ Writable.prototype._destroy = function (err, cb) {
   cb(err);
 };
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./_stream_duplex":28,"./internal/streams/destroy":34,"./internal/streams/stream":35,"_process":26,"core-util-is":19,"inherits":22,"process-nextick-args":25,"safe-buffer":40,"util-deprecate":43}],33:[function(require,module,exports){
+},{"./_stream_duplex":40,"./internal/streams/destroy":46,"./internal/streams/stream":47,"_process":38,"core-util-is":30,"inherits":33,"process-nextick-args":37,"safe-buffer":52,"util-deprecate":55}],45:[function(require,module,exports){
 'use strict';
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -8238,7 +9801,7 @@ if (util && util.inspect && util.inspect.custom) {
     return this.constructor.name + ' ' + obj;
   };
 }
-},{"safe-buffer":40,"util":17}],34:[function(require,module,exports){
+},{"safe-buffer":52,"util":28}],46:[function(require,module,exports){
 'use strict';
 
 /*<replacement>*/
@@ -8313,13 +9876,13 @@ module.exports = {
   destroy: destroy,
   undestroy: undestroy
 };
-},{"process-nextick-args":25}],35:[function(require,module,exports){
+},{"process-nextick-args":37}],47:[function(require,module,exports){
 module.exports = require('events').EventEmitter;
 
-},{"events":20}],36:[function(require,module,exports){
+},{"events":31}],48:[function(require,module,exports){
 module.exports = require('./readable').PassThrough
 
-},{"./readable":37}],37:[function(require,module,exports){
+},{"./readable":49}],49:[function(require,module,exports){
 exports = module.exports = require('./lib/_stream_readable.js');
 exports.Stream = exports;
 exports.Readable = exports;
@@ -8328,13 +9891,13 @@ exports.Duplex = require('./lib/_stream_duplex.js');
 exports.Transform = require('./lib/_stream_transform.js');
 exports.PassThrough = require('./lib/_stream_passthrough.js');
 
-},{"./lib/_stream_duplex.js":28,"./lib/_stream_passthrough.js":29,"./lib/_stream_readable.js":30,"./lib/_stream_transform.js":31,"./lib/_stream_writable.js":32}],38:[function(require,module,exports){
+},{"./lib/_stream_duplex.js":40,"./lib/_stream_passthrough.js":41,"./lib/_stream_readable.js":42,"./lib/_stream_transform.js":43,"./lib/_stream_writable.js":44}],50:[function(require,module,exports){
 module.exports = require('./readable').Transform
 
-},{"./readable":37}],39:[function(require,module,exports){
+},{"./readable":49}],51:[function(require,module,exports){
 module.exports = require('./lib/_stream_writable.js');
 
-},{"./lib/_stream_writable.js":32}],40:[function(require,module,exports){
+},{"./lib/_stream_writable.js":44}],52:[function(require,module,exports){
 /* eslint-disable node/no-deprecated-api */
 var buffer = require('buffer')
 var Buffer = buffer.Buffer
@@ -8398,7 +9961,7 @@ SafeBuffer.allocUnsafeSlow = function (size) {
   return buffer.SlowBuffer(size)
 }
 
-},{"buffer":18}],41:[function(require,module,exports){
+},{"buffer":29}],53:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -8527,7 +10090,7 @@ Stream.prototype.pipe = function(dest, options) {
   return dest;
 };
 
-},{"events":20,"inherits":22,"readable-stream/duplex.js":27,"readable-stream/passthrough.js":36,"readable-stream/readable.js":37,"readable-stream/transform.js":38,"readable-stream/writable.js":39}],42:[function(require,module,exports){
+},{"events":31,"inherits":33,"readable-stream/duplex.js":39,"readable-stream/passthrough.js":48,"readable-stream/readable.js":49,"readable-stream/transform.js":50,"readable-stream/writable.js":51}],54:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -8824,7 +10387,7 @@ function simpleWrite(buf) {
 function simpleEnd(buf) {
   return buf && buf.length ? this.write(buf) : '';
 }
-},{"safe-buffer":40}],43:[function(require,module,exports){
+},{"safe-buffer":52}],55:[function(require,module,exports){
 (function (global){
 
 /**
@@ -8895,16 +10458,16 @@ function config (name) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],44:[function(require,module,exports){
-arguments[4][22][0].apply(exports,arguments)
-},{"dup":22}],45:[function(require,module,exports){
+},{}],56:[function(require,module,exports){
+arguments[4][33][0].apply(exports,arguments)
+},{"dup":33}],57:[function(require,module,exports){
 module.exports = function isBuffer(arg) {
   return arg && typeof arg === 'object'
     && typeof arg.copy === 'function'
     && typeof arg.fill === 'function'
     && typeof arg.readUInt8 === 'function';
 }
-},{}],46:[function(require,module,exports){
+},{}],58:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -9494,4 +11057,4 @@ function hasOwnProperty(obj, prop) {
 }
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":45,"_process":26,"inherits":44}]},{},[14]);
+},{"./support/isBuffer":57,"_process":38,"inherits":56}]},{},[23]);
