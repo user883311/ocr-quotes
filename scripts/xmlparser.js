@@ -2,10 +2,6 @@ const importXML = require("./importXML");
 const xml = importXML.endPoint;
 
 const et = require('elementtree');
-// const XML = et.XML;
-// const ElementTree = et.ElementTree;
-// const element = et.Element;
-// const subElement = et.SubElement;
 
 const etree = et.parse(xml);
 console.log(xml);

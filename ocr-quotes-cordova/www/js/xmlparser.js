@@ -1,5 +1,5 @@
-const importXML = require("./ocrPhoto");
-const xml = importXML.endPoint;
+const octPhoto = require("./ocrPhoto");
+const xml = octPhoto.endPoint;
 
 const et = require('elementtree');
 const etree = et.parse(xml);
