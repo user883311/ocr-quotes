@@ -9,6 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "browserify": "^16.2.2",
     "elementtree": "^0.1.7",
     "tesseract.js": "^1.0.10",
     "tesseractocr": "^1.1.0",
